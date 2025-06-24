@@ -1,0 +1,45 @@
+{
+  "name": "medical-patients-frontend",
+  "version": "1.1.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Frontend components for Medical Patients Data System, potentially including advanced visualizations.",
+  "scripts": {
+    "test": "jest",
+    "test:ui": "jest static/new-ui/tests/",
+    "test:e2e": "python -m pytest tests/test_ui_e2e.py -v",
+    "test:all": "npm test && npm run test:ui && npm run test:e2e",
+    "build:all-frontend": "echo 'No frontend components to build yet'",
+    "lint": "eslint static/js/**/*.js --fix",
+    "lint:check": "eslint static/js/**/*.js",
+    "format": "prettier --write \"static/**/*.{js,json,css,html}\"",
+    "format:check": "prettier --check \"static/**/*.{js,json,css,html}\"",
+    "prepare": "husky install"
+  },
+  "dependencies": {
+    "@testing-library/react": "^16.3.0",
+    "lucide-react": "^0.510.0",
+    "react": "^19.1.0",
+    "recharts": "^2.15.3"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@types/jest": "^29.5.14",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "esbuild": "^0.25.4",
+    "jest-environment-jsdom": "^29.7.0",
+    "ts-jest": "^29.3.2",
+    "eslint": "^8.50.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^14.0.0"
+  },
+  "lint-staged": {
+    "*.js": ["eslint --fix", "prettier --write"],
+    "*.{json,css,html}": ["prettier --write"],
+    "*.py": ["ruff check --fix", "ruff format"]
+  }
+}
