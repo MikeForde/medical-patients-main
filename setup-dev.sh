@@ -24,30 +24,25 @@ print_error() {
 
 print_info "Setting up development environment..."
 
-# Check Python version
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
-REQUIRED_VERSION="3.8"
+if [ -f /.dockerenv ]; then
+  print_info "Running inside devcontainer – skipping host dependency checks"
+  sudo chown -R "$(id -u):$(id -g)" "$(pwd)"
+else
+    # Check Python version
+    PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
+    REQUIRED_VERSION="3.8"
 
-if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$PYTHON_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]; then
-    print_error "Python $REQUIRED_VERSION or higher is required. Found: Python $PYTHON_VERSION"
-    exit 1
+    if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$PYTHON_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]; then
+        print_error "Python $REQUIRED_VERSION or higher is required. Found: Python $PYTHON_VERSION"
+        exit 1
+    fi
+
+    # Check Node.js
+    if ! command -v node &> /dev/null; then
+        print_error "Node.js is not installed. Please install Node.js 16 or higher."
+        exit 1
+    fi
 fi
-
-# Check Node.js
-if ! command -v node &> /dev/null; then
-    print_error "Node.js is not installed. Please install Node.js 16 or higher."
-    exit 1
-fi
-
-# Create virtual environment if it doesn't exist
-if [ ! -d ".venv" ]; then
-    print_info "Creating Python virtual environment..."
-    python3 -m venv .venv
-fi
-
-# Activate virtual environment
-print_info "Activating virtual environment..."
-source .venv/bin/activate
 
 # Upgrade pip
 print_info "Upgrading pip..."
@@ -93,8 +88,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 # Database setup reminder
-print_warning "Don't forget to set up the database:"
-echo "  1. Start PostgreSQL and Redis: docker compose up -d db redis"
+print_warning "On your **host** machine, start PostgreSQL and Redis:"
+echo "  1. docker compose up -d db redis"
 echo "  2. Run migrations: alembic upgrade head"
 echo "  3. Copy .env.example to .env and update values"
 

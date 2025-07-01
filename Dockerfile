@@ -1,5 +1,11 @@
 # Build stage - for optimizing the final image size
-FROM python:3.11-bookworm AS builder
+FROM registry.access.redhat.com/ubi9/python-39 as builder
+
+USER root
+# install build‐time deps with microdnf, which works in-cluster
+RUN microdnf update -y \
+ && microdnf install -y gcc postgresql-devel \
+ && microdnf clean all
 
 # Set working directory
 WORKDIR /app
@@ -11,7 +17,7 @@ COPY requirements.txt .
 RUN pip wheel --no-cache-dir --wheel-dir /app/wheels -r requirements.txt
 
 # Test stage - for running tests in CI
-FROM python:3.11-bookworm AS test
+FROM registry.access.redhat.com/ubi9/python-39 AS test
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -38,7 +44,11 @@ COPY . /app/
 CMD ["pytest", "tests/", "-v", "--cov=src", "--cov=patient_generator"]
 
 # Final stage
-FROM python:3.11-bookworm
+FROM registry.access.redhat.com/ubi9/python-39 
+
+USER root
+RUN microdnf install -y postgresql-client \
+    && microdnf clean all
 
 # Create a non-root user to run the application
 RUN groupadd -r patientgen && useradd -r -g patientgen patientgen

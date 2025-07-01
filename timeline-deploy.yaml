@@ -1,0 +1,40 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: timeline-viewer
+spec:
+  replicas: 1
+  selector:
+    app: timeline-viewer
+  template:
+    metadata:
+      labels:
+        app: timeline-viewer
+    spec:
+      containers:
+        - name: timeline-viewer
+          image: docker.io/mikeforde/medical-patients-timeline:latest
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: timeline-viewer
+spec:
+  selector:
+    app: timeline-viewer
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: timeline-viewer
+spec:
+  to:
+    kind: Service
+    name: timeline-viewer
+  port:
+    targetPort: 80

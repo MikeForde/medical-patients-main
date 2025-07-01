@@ -1,6 +1,16 @@
 #!/bin/bash
 set -e
 
+# Load .env into the environment
+if [ -f ".env" ]; then
+  echo "Loading .env variables…"
+  # export each KEY=VALUE
+  set -o allexport
+  # shellcheck disable=SC1091
+  source .env
+  set +o allexport
+fi
+
 echo "Starting application..."
 
 # Only run migrations if database URL is available

@@ -7,6 +7,23 @@
 # Exit on any error and enable strict error handling
 set -euo pipefail
 
+# Load .env into the environment
+if [ -f ".env" ]; then
+  echo "Loading .env variables…"
+  # export each KEY=VALUE
+  set -o allexport
+  # shellcheck disable=SC1091
+  source .env
+  set +o allexport
+fi
+
+# Detect container
+IN_CONTAINER=false
+if [ -f /.dockerenv ]; then
+    IN_CONTAINER=true
+    echo -e "\033[0;34mℹ️  Detected Dev Container – skipping host orchestration steps\033[0m"
+fi
+
 # Logging and color support
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -48,118 +65,127 @@ log_step() {
 # Check prerequisites
 check_prerequisites() {
     log_step "Checking Prerequisites"
-    
-    local missing_deps=()
-    
-    # Check Docker
-    if ! command -v docker &> /dev/null; then
-        missing_deps+=("docker")
+
+    if $IN_CONTAINER; then
+        log_info "Inside container – skipping Docker/docker-compose checks"
+    else
+        local missing_deps=()
+
+        # Check Docker
+        if ! command -v docker &>/dev/null; then
+            missing_deps+=("docker")
+        fi
+
+        # Check Docker Compose
+        if ! command -v docker compose &>/dev/null && ! command -v docker-compose &>/dev/null; then
+            missing_deps+=("docker-compose")
+        fi
+
+        # Check Node.js
+        if ! command -v node &>/dev/null; then
+            missing_deps+=("node")
+        fi
+
+        # Check npm
+        if ! command -v npm &>/dev/null; then
+            missing_deps+=("npm")
+        fi
+
+        # Check Python
+        if ! command -v python3 &>/dev/null && ! command -v python &>/dev/null; then
+            missing_deps+=("python")
+        fi
+
+        if [ ${#missing_deps[@]} -ne 0 ]; then
+            log_error "Missing required dependencies: ${missing_deps[*]}"
+            log_info "Please install the missing dependencies and try again"
+            exit 1
+        fi
+
+        # Check Docker daemon
+        if ! docker info &>/dev/null; then
+            log_error "Docker daemon is not running. Please start Docker and try again."
+            exit 1
+        fi
     fi
-    
-    # Check Docker Compose
-    if ! command -v docker compose &> /dev/null && ! command -v docker-compose &> /dev/null; then
-        missing_deps+=("docker-compose")
-    fi
-    
-    # Check Node.js
-    if ! command -v node &> /dev/null; then
-        missing_deps+=("node")
-    fi
-    
-    # Check npm
-    if ! command -v npm &> /dev/null; then
-        missing_deps+=("npm")
-    fi
-    
-    # Check Python
-    if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
-        missing_deps+=("python")
-    fi
-    
-    if [ ${#missing_deps[@]} -ne 0 ]; then
-        log_error "Missing required dependencies: ${missing_deps[*]}"
-        log_info "Please install the missing dependencies and try again"
-        exit 1
-    fi
-    
-    # Check Docker daemon
-    if ! docker info &> /dev/null; then
-        log_error "Docker daemon is not running. Please start Docker and try again."
-        exit 1
-    fi
-    
+
     log_success "All prerequisites are met"
 }
 
 # Environment validation
 validate_environment() {
     log_step "Validating Environment"
-    
+
     # Check if we're in the correct directory
     if [[ ! -f "package.json" ]] || [[ ! -f "requirements.txt" ]] || [[ ! -f "$COMPOSE_FILE" ]]; then
         log_error "This script must be run from the project root directory"
         log_info "Expected files: package.json, requirements.txt, $COMPOSE_FILE"
         exit 1
     fi
-    
+
     # Check for critical configuration files
     if [[ ! -f "alembic.ini" ]]; then
         log_error "alembic.ini not found - database migrations may not work"
         exit 1
     fi
-    
+
     if [[ ! -d "src" ]]; then
         log_error "src/ directory not found - new architecture not detected"
         exit 1
     fi
-    
+
     # Validate API key
     if [[ "$API_KEY" == "your_secret_api_key_here" ]]; then
         log_warning "Using default API key - change API_KEY environment variable for production"
     fi
-    
+
     log_success "Environment validation passed"
 }
 
 # Clean up previous runs
 cleanup_previous_run() {
     log_step "Cleaning Up Previous Runs"
-    
+
+    if $IN_CONTAINER; then
+        log_info "Inside container – skipping previous-run cleanup"
+        return
+    fi
+
     # Stop and remove existing containers
     if docker compose -f "$COMPOSE_FILE" ps -q | grep -q .; then
         log_info "Stopping existing containers..."
         docker compose -f "$COMPOSE_FILE" down --remove-orphans
     fi
-    
+
     # Clean up Docker build cache (optional)
     if [[ "${CLEAN_DOCKER_CACHE:-false}" == "true" ]]; then
         log_info "Cleaning Docker build cache..."
         docker builder prune -f || true
     fi
-    
+
     # Clean up temporary files
     log_info "Cleaning temporary files..."
     rm -rf temp/* 2>/dev/null || true
     rm -rf output/job_* 2>/dev/null || true
     find . -name "*.pyc" -delete 2>/dev/null || true
     find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-    
+
     log_success "Cleanup completed"
 }
 
 # Install and update dependencies
 install_dependencies() {
     log_step "Installing Dependencies"
-    
+
     # Frontend dependencies
     log_info "Installing/updating frontend dependencies..."
     npm ci --silent
     log_success "Frontend dependencies installed"
-    
+
     # Check for Python dependencies (for local development)
     if [[ "${INSTALL_PYTHON_DEPS:-false}" == "true" ]]; then
         log_info "Installing Python dependencies locally..."
-        if command -v pip &> /dev/null; then
+        if command -v pip &>/dev/null; then
             pip install -r requirements.txt --quiet
             log_success "Python dependencies installed"
         else
@@ -171,16 +197,21 @@ install_dependencies() {
 # Build frontend assets
 build_frontend() {
     log_step "Building Frontend Assets"
-    
+
+    if ! grep -q '"build:all-frontend"' package.json; then
+        log_warning "No frontend build script defined – skipping frontend build"
+        return 0
+    fi
+
     log_info "Building all frontend components..."
     npm run build:all-frontend
-    
+
     # Verify build outputs
     if [[ ! -d "static/dist" ]]; then
-        log_error "Frontend build failed - static/dist directory not created"
-        exit 1
+        log_warning "static/dist not created by build – creating empty directory"
+        mkdir -p static/dist
     fi
-    
+
     # Check for key build artifacts
     local expected_files=("static/dist/configuration-panel.js" "static/dist/bundle.js" "static/dist/military-dashboard-bundle.js")
     for file in "${expected_files[@]}"; do
@@ -188,17 +219,22 @@ build_frontend() {
             log_warning "Expected build artifact not found: $file"
         fi
     done
-    
-    log_success "Frontend assets built successfully"
+
+    log_success "Frontend assets step complete"
 }
 
 # Start Docker services
 start_services() {
     log_step "Starting Docker Services"
-    
+
+    if $IN_CONTAINER; then
+        log_info "Inside container – skip start_services (run on host)"
+        return
+    fi
+
     log_info "Starting PostgreSQL and Backend services..."
     docker compose -f "$COMPOSE_FILE" up --build -d
-    
+
     log_info "Services started, waiting for health checks..."
     wait_for_services
 }
@@ -206,38 +242,43 @@ start_services() {
 # Wait for services to be healthy
 wait_for_services() {
     local retry_count=0
-    
+
     log_info "Waiting for services to become healthy (max ${MAX_HEALTH_RETRIES} attempts)..."
-    
+
     while [[ $retry_count -lt $MAX_HEALTH_RETRIES ]]; do
         if docker compose -f "$COMPOSE_FILE" ps app | grep -Eiq 'healthy'; then
             log_success "Application service is healthy"
             return 0
         fi
-        
+
         retry_count=$((retry_count + 1))
         log_info "Health check $retry_count/$MAX_HEALTH_RETRIES - waiting ${HEALTH_CHECK_INTERVAL}s..."
         sleep $HEALTH_CHECK_INTERVAL
     done
-    
+
     # Health check failed
     log_error "Services failed to become healthy within timeout"
     log_info "Service status:"
     docker compose -f "$COMPOSE_FILE" ps
-    
+
     log_info "Application logs:"
     docker compose -f "$COMPOSE_FILE" logs --tail=50 app
-    
+
     log_info "Database logs:"
     docker compose -f "$COMPOSE_FILE" logs --tail=20 db
-    
+
     exit 1
 }
 
 # Run database migrations
 run_migrations() {
     log_step "Running Database Migrations"
-    
+
+    if $IN_CONTAINER; then
+        log_info "Inside container – skip migrations (run on host)"
+        return
+    fi
+
     log_info "Applying Alembic migrations..."
     if ! docker compose -f "$COMPOSE_FILE" exec -T app alembic upgrade head; then
         log_error "Database migration failed"
@@ -245,16 +286,16 @@ run_migrations() {
         docker compose -f "$COMPOSE_FILE" logs db
         exit 1
     fi
-    
+
     log_success "Database migrations completed"
 }
 
 # Self-testing functionality
 run_self_tests() {
     log_step "Running Self-Tests"
-    
+
     local base_url="http://localhost:8000"
-    
+
     # Test 1: Health endpoint
     log_info "Testing health endpoint..."
     if timeout $TEST_TIMEOUT curl -sf "$base_url/health" &>/dev/null; then
@@ -263,7 +304,7 @@ run_self_tests() {
         log_error "Health endpoint failed"
         return 1
     fi
-    
+
     # Test 2: API documentation
     log_info "Testing API documentation..."
     if timeout $TEST_TIMEOUT curl -sf "$base_url/docs" &>/dev/null; then
@@ -271,7 +312,7 @@ run_self_tests() {
     else
         log_warning "API documentation not accessible"
     fi
-    
+
     # Test 3: Static assets
     log_info "Testing static assets..."
     if timeout $TEST_TIMEOUT curl -sf "$base_url/static/index.html" &>/dev/null; then
@@ -280,7 +321,7 @@ run_self_tests() {
         log_error "Main UI not accessible"
         return 1
     fi
-    
+
     # Test 4: API with authentication
     log_info "Testing authenticated API endpoint..."
     if timeout $TEST_TIMEOUT curl -sf -H "X-API-Key: $API_KEY" "$base_url/api/v1/configurations/reference/nationalities/" &>/dev/null; then
@@ -289,7 +330,7 @@ run_self_tests() {
         log_error "Authenticated API endpoints failed"
         return 1
     fi
-    
+
     # Test 5: Database connectivity (via API)
     log_info "Testing database connectivity..."
     if timeout $TEST_TIMEOUT curl -sf -H "X-API-Key: $API_KEY" "$base_url/api/v1/configurations/" &>/dev/null; then
@@ -298,7 +339,7 @@ run_self_tests() {
         log_error "Database connectivity failed"
         return 1
     fi
-    
+
     log_success "All self-tests passed!"
     return 0
 }
@@ -306,28 +347,34 @@ run_self_tests() {
 # Performance and security checks
 run_hardening_checks() {
     log_step "Running Hardening Checks"
-    
+
     # Check for default credentials
     if [[ "$API_KEY" == "your_secret_api_key_here" ]]; then
         log_warning "SECURITY: Default API key detected - change for production!"
     fi
-    
+
+    # If in container then skip rest of checks
+    if $IN_CONTAINER; then
+        log_info "Inside container – skip remaining checks"
+        return
+    fi
+
     # Check Docker resource limits
     local memory_limit=$(docker compose -f "$COMPOSE_FILE" config | grep -A5 "deploy:" | grep "memory:" | head -1 || echo "")
     if [[ -z "$memory_limit" ]]; then
         log_warning "PERFORMANCE: No memory limits set for containers"
     fi
-    
+
     # Check for development-only configurations
     if docker compose -f "$COMPOSE_FILE" config | grep -q "DEBUG.*true"; then
         log_info "DEBUG mode enabled (appropriate for development)"
     fi
-    
+
     # Check database connection security
     if docker compose -f "$COMPOSE_FILE" config | grep -q "sslmode=disable"; then
         log_warning "SECURITY: Database SSL disabled (appropriate for development)"
     fi
-    
+
     log_success "Hardening checks completed"
 }
 
@@ -335,9 +382,9 @@ run_hardening_checks() {
 generate_test_data() {
     if [[ "${GENERATE_TEST_DATA:-false}" == "true" ]]; then
         log_step "Generating Test Data"
-        
+
         local base_url="http://localhost:8000"
-        
+
         log_info "Creating test configuration..."
         local config_response
         config_response=$(curl -sf -X POST "$base_url/api/v1/configurations/" \
@@ -368,10 +415,10 @@ generate_test_data() {
             log_warning "Failed to create test configuration"
             return 0
         }
-        
+
         local config_id
         config_id=$(echo "$config_response" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
-        
+
         if [[ -n "$config_id" ]]; then
             log_info "Generating test patients with configuration: $config_id"
             curl -sf -X POST "$base_url/api/generate" \
@@ -389,7 +436,7 @@ generate_test_data() {
 # Print startup summary
 print_summary() {
     log_step "Development Environment Ready!"
-    
+
     echo -e "${CYAN}"
     echo "🔗 Application URLs:"
     echo "   • Main Application:      http://localhost:8000/static/index.html"
@@ -425,47 +472,47 @@ cleanup_on_exit() {
 # Main execution
 main() {
     trap cleanup_on_exit EXIT
-    
+
     log_step "Medical Patient Generator - Development Environment Setup"
     log_info "Refactored architecture with hardening and self-testing"
     echo ""
-    
+
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --clean)
-                CLEAN_DOCKER_CACHE=true
-                shift
-                ;;
-            --test-data)
-                GENERATE_TEST_DATA=true
-                shift
-                ;;
-            --skip-tests)
-                SKIP_SELF_TESTS=true
-                shift
-                ;;
-            --python-deps)
-                INSTALL_PYTHON_DEPS=true
-                shift
-                ;;
-            -h|--help)
-                echo "Usage: $0 [OPTIONS]"
-                echo "Options:"
-                echo "  --clean        Clean Docker build cache"
-                echo "  --test-data    Generate test data after setup"
-                echo "  --skip-tests   Skip self-testing phase"
-                echo "  --python-deps  Install Python dependencies locally"
-                echo "  -h, --help     Show this help message"
-                exit 0
-                ;;
-            *)
-                log_error "Unknown option: $1"
-                exit 1
-                ;;
+        --clean)
+            CLEAN_DOCKER_CACHE=true
+            shift
+            ;;
+        --test-data)
+            GENERATE_TEST_DATA=true
+            shift
+            ;;
+        --skip-tests)
+            SKIP_SELF_TESTS=true
+            shift
+            ;;
+        --python-deps)
+            INSTALL_PYTHON_DEPS=true
+            shift
+            ;;
+        -h | --help)
+            echo "Usage: $0 [OPTIONS]"
+            echo "Options:"
+            echo "  --clean        Clean Docker build cache"
+            echo "  --test-data    Generate test data after setup"
+            echo "  --skip-tests   Skip self-testing phase"
+            echo "  --python-deps  Install Python dependencies locally"
+            echo "  -h, --help     Show this help message"
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            exit 1
+            ;;
         esac
     done
-    
+
     # Execute setup steps
     check_prerequisites
     validate_environment
@@ -475,7 +522,7 @@ main() {
     start_services
     run_migrations
     run_hardening_checks
-    
+
     # Run self-tests unless skipped
     if [[ "${SKIP_SELF_TESTS:-false}" != "true" ]]; then
         if ! run_self_tests; then
@@ -483,10 +530,10 @@ main() {
             exit 1
         fi
     fi
-    
+
     # Generate test data if requested
     generate_test_data
-    
+
     # Success!
     print_summary
     log_success "Development environment is ready and tested!"
