@@ -59,7 +59,7 @@ testFramework.test('ApiClient should initialize with correct defaults', () => {
     const client = new ApiClient();
 
     assert(client.baseUrl === '', 'Base URL should default to empty string');
-    assert(client.apiKey === 'your_secret_api_key_here', 'API key should have default value');
+    assert(client.apiKey === 'bUXPV0bRJp1rU40EMaVDyUgFw1aafsn', 'API key should have default value');
     assert(client.defaultHeaders['Content-Type'] === 'application/json', 'Should have JSON content type');
     assert(client.defaultHeaders['X-API-Key'] === client.apiKey, 'Should include API key in headers');
 });

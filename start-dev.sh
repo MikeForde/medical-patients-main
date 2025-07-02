@@ -35,7 +35,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 COMPOSE_FILE="docker-compose.dev.yml"
-API_KEY="${API_KEY:-your_secret_api_key_here}"
+API_KEY="${API_KEY:-bUXPV0bRJp1rU40EMaVDyUgFw1aafsn}"
 MAX_HEALTH_RETRIES=30
 HEALTH_CHECK_INTERVAL=5
 TEST_TIMEOUT=60
@@ -135,7 +135,7 @@ validate_environment() {
     fi
 
     # Validate API key
-    if [[ "$API_KEY" == "your_secret_api_key_here" ]]; then
+    if [[ "$API_KEY" == "bUXPV0bRJp1rU40EMaVDyUgFw1aafsn" ]]; then
         log_warning "Using default API key - change API_KEY environment variable for production"
     fi
 
@@ -349,7 +349,7 @@ run_hardening_checks() {
     log_step "Running Hardening Checks"
 
     # Check for default credentials
-    if [[ "$API_KEY" == "your_secret_api_key_here" ]]; then
+    if [[ "$API_KEY" == "bUXPV0bRJp1rU40EMaVDyUgFw1aafsn" ]]; then
         log_warning "SECURITY: Default API key detected - change for production!"
     fi
 
