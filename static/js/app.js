@@ -243,7 +243,9 @@ class PatientGeneratorApp {
     }
 
     updateGenerateButtonState() {
-        if (!this.accordion || !this.generateBtn) return;
+        if (!this.accordion || !this.generateBtn) {
+            return;
+        }
 
         const isValid = this.accordion.isAllValid();
         const isGenerating = this.currentJobId !== null;
@@ -290,7 +292,8 @@ class PatientGeneratorApp {
             const [frontsJson, scenarioJson] = this.accordion.getAllContent();
 
             // Debug: Check if we're getting content
-            // console.log('Updating config overview with:', { frontsJson: frontsJson?.substring(0, 50), scenarioJson: scenarioJson?.substring(0, 50) });
+            // console.log('Updating config overview with:', { frontsJson: frontsJson?.substring(0, 50),
+            // scenarioJson: scenarioJson?.substring(0, 50) });
 
             // Parse JSON safely
             let fronts, scenario;

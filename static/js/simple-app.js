@@ -2,7 +2,7 @@
  * Simple Military Patient Generator Application
  */
 
-const API_KEY = 'your_secret_api_key_here';
+const API_KEY = 'bUXPV0bRJp1rU40EMaVDyUgFw1aafsn';
 
 // Default configuration based on JSON files
 const DEFAULT_CONFIG = {

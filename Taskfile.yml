@@ -72,24 +72,20 @@ tasks:
         echo ""
 
   dev:
-    desc: Start development server (Python + Docker DB)
+    desc: Start development server (Python only, using host DB)
     cmds:
       - |
         if [ ! -f .env ]; then
           echo "⚠️  No .env file found. Run 'task init' first!"
           exit 1
         fi
-      - docker compose up -d db redis
-      - sleep 3
-      - |
-        # Simple migration run
-        docker compose run --rm app alembic upgrade head 2>/dev/null || true
       - |
         # Start the app
         echo "Starting development server..."
         echo "API: http://localhost:8000"
         echo "Docs: http://localhost:8000/docs"
         echo ""
+        # Use host PostgreSQL and Redis (host.network mode)
         {{.PYTHON}} -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
   start:

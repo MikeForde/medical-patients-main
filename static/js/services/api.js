@@ -11,11 +11,12 @@ class ApiClient {
         // Use config API key if available, fallback to parameter or default
         this.apiKey =
             apiKey ||
-            (typeof window !== 'undefined' && window.config ? window.config.apiKey : 'your_secret_api_key_here');
+            (typeof window !== 'undefined' && window.config ? window.config.apiKey : 'bUXPV0bRJp1rU40EMaVDyUgFw1aafsn');
         this.defaultHeaders = {
             'Content-Type': 'application/json',
             'X-API-Key': this.apiKey
         };
+        console.log('this.apiKey = ${this.apiKey}');
     }
 
     /**
@@ -284,4 +285,4 @@ if (typeof window !== 'undefined') {
     window.apiClient = apiClient;
 }
 
-// console.log('🔌 v1 API Client loaded and ready');
+console.log('🔌 v1 API Client loaded and ready');

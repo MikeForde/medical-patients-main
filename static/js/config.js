@@ -54,20 +54,21 @@ class Config {
 
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
             return 'local';
-        } else if (hostname.includes('staging') || hostname.includes('z9rms')) {
-            return 'staging';
-        } else if (hostname === 'milmed.tech') {
-            return 'production';
-        } else {
-            console.warn(`Unknown hostname: ${hostname}, defaulting to local config`);
-            return 'local';
         }
+        if (hostname.includes('staging') || hostname.includes('z9rms')) {
+            return 'staging';
+        }
+        if (hostname === 'milmed.tech') {
+            return 'production';
+        }
+        console.warn(`Unknown hostname: ${hostname}, defaulting to local config`);
+        return 'local';
     }
 
     getEnvironmentConfig() {
         const configs = {
             local: {
-                apiKey: 'your_secret_api_key_here',
+                apiKey: 'bUXPV0bRJp1rU40EMaVDyUgFw1aafsn',
                 apiBaseUrl: '',
                 debug: true,
                 environment: 'local'
