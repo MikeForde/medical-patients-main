@@ -1,6 +1,6 @@
 # Military Medical Exercise Patient Generator
 
-*This project is based on [Markus Sandelin’s **Medical Patients Generator** repository](https://github.com/banton/medical-patients). The goal of this fork is to make the environment Visual Studio Code **Dev Container** friendly and to separate the core application (Python/Node) from the database and cache services (PostgreSQL and Redis), with the latter running as separate containers.*
+*This project is based on [Markus Sandelin’s **Medical Patients Generator** repository](https://github.com/banton/medical-patients). The goal of this fork is to make the environment Visual Studio Code **Dev Container** friendly and to separate the core application (Python/Node) from the database and cache services (PostgreSQL and Redis), with the latter running as separate containers. This will hopefully make for easier deployment to a rather exacting version of OpenShift*
 
 
 # Original README.md as below except where indicated.
@@ -619,8 +619,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Acknowledgments
+## Original Acknowledgments
 
 - This tool was developed to support NATO medical interoperability exercises
 - Special thanks to the medical subject matter experts who provided guidance on realistic patient flow and treatment scenarios
+
+## Acknowledgments for this variant
+- Huge thanks to Markus Sandelin for all his hard work - meaning this devcontainer variant is 99% his work, and 1% mine.
 - This specific variation on the original tool was developed for easier deployment to a rather exacting version of OpenShift! :-)
