@@ -9,7 +9,8 @@
       "version": "3.10.12"
     }
   },
-  "postCreateCommand": "npm --version && node --version && python3 --version",
+  "postCreateCommand":
+   "npm --version && node --version && python3 --version && pip install --upgrade pip && pip install -r requirements.txt && alembic upgrade head",
   "customizations": {
     "vscode": {
       "extensions": [
