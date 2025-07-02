@@ -7,7 +7,7 @@ COPY patient-timeline-viewer/ ./
 RUN npm run build
 
 # 2) Final stage: Python + static
-FROM python:3.11-slim
+FROM python:3.11-ubi8
 
 WORKDIR /app
 
