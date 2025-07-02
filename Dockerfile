@@ -7,19 +7,15 @@ COPY patient-timeline-viewer/ ./
 RUN npm run build
 
 # 2) Final stage: Python + static
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
 # Rewrite APT sources to use HTTPS (avoids HTTP 470 errors in OpenShift build)
-RUN sed -i \
-      -e 's|http://deb.debian.org/debian|https://deb.debian.org/debian|g' \
-      -e 's|http://security.debian.org/debian-security|https://security.debian.org/debian-security|g' \
-    /etc/apt/sources.list \
- && apt-get update \
- && apt-get install -y --no-install-recommends \
-      gcc libpq-dev \
- && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+      git \
+      libpq-dev gcc \
+      && rm -rf /var/lib/apt/lists/*S
 
 # Copy Python requirements & install
 COPY requirements.txt .
