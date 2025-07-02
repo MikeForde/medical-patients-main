@@ -148,14 +148,14 @@ For detailed progress tracking, see the memory system documentation in the `memo
 
 The application uses [Task](https://taskfile.dev/).
 
-### Prerequisites
+### NEW Prerequisites
 
 - **Operating System**: Any OS that supports Docker (e.g., Windows, macOS, Linux).
 - **Tools**: Docker and Visual Studio Code (with the Remote Containers extension) installed.
 
 > **Note:** All development dependencies are managed within the VS Code Dev Container, so you don’t need to install Python/Node or other libraries on your host.
 
-### Quick Start
+### NEW Quick Start
 
 The easiest way to get started:
 
@@ -201,7 +201,7 @@ task timeline   # Open timeline viewer (optional)
 
 💡 **Tip**: Most developers only need `task init` and `task dev`. Everything else is optional.
 
-### Manual Setup - this was part of the original README but due to the devcontainer there aren't many steps left!
+### NEW Manual Setup - this section was part of the original README but due to the devcontainer there aren't many manual steps left!
 
 For development without Task:
 
@@ -624,6 +624,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - This tool was developed to support NATO medical interoperability exercises
 - Special thanks to the medical subject matter experts who provided guidance on realistic patient flow and treatment scenarios
 
-## Acknowledgments for this variant
+## NEW Acknowledgments for this variant
 - Huge thanks to Markus Sandelin for all his hard work - meaning this devcontainer variant is 99% his work, and 1% mine.
 - This specific variation on the original tool was developed for easier deployment to a rather exacting version of OpenShift! :-)
