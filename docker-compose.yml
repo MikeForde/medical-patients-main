@@ -1,0 +1,37 @@
+# [optional] run docker compose before opening this as a devcontainer to set up postgreSQL and redis
+# [alternatively] set up redis and/or postgreSQL manually - native or container - but use parameters below.
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=medgen_user
+      - POSTGRES_PASSWORD=medgen_password # Use .env file or secrets in production
+      - POSTGRES_DB=medgen_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432" # Optional: expose for direct access
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medgen_user -d medgen_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: "unless-stopped"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: "unless-stopped"
+    command: redis-server --appendonly yes
+
+volumes:
+  postgres_data:
+  redis_data:

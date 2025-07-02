@@ -165,9 +165,9 @@ git clone https://github.com/MikeForde/medical-patients-main.git
 cd medical-patients-main
 
 # 2. BEFORE opening it as devcontainer, start the database (PostgreSQL) and cache (Redis) containers in the background
-docker compose up -d db redis   # starts only the db and redis services from the original docker-compose
+docker compose up -d  # starts only the db and redis services from the original docker-compose
 
-# 3. THEN, open the project in a VS Code Dev Container (requires Docker to be running)
+# 3. THEN, open the project in a VS Code Dev Container (requires Docker to be running) - there is already a devcontainer.json config
 
 # 4. Install Task (if not already installed on your system)
 ./scripts/install-task.sh
@@ -208,16 +208,18 @@ task timeline   # Open timeline viewer (optional)
 For development without Task:
 
 ```bash
-# 1. Start PostgreSQL and Redis
-docker compose up -d db redis
+# 1. Start PostgreSQL and Redis - do this before rebuilding into a devcontainer
+docker compose up -d
 
-# 2. Install Python dependencies
+# 2. Rebuild as a devcontainer - there is already a devcontainer.json config
+
+# 3. Install Python dependencies
 pip install -r requirements.txt
 
-# 3. Run database migrations
+# 4. Run database migrations
 alembic upgrade head
 
-# 4. Start the application
+# 5. Start the application
 uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
