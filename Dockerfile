@@ -7,15 +7,9 @@ COPY patient-timeline-viewer/ ./
 RUN npm run build
 
 # 2) Final stage: Python + static
-FROM python:3.11-ubi8
+FROM image-registry.openshift-image-registry.svc:5000/openshift/python@sha256:6f6592717b9d88dc1ace1c4c144cfcbf59afa288edeb3cdd7a79d6d2f7467a11
 
 WORKDIR /app
-
-# Rewrite APT sources to use HTTPS (avoids HTTP 470 errors in OpenShift build)
-RUN apt-get update && apt-get install -y \
-      git \
-      libpq-dev gcc \
-      && rm -rf /var/lib/apt/lists/*
 
 # Copy Python requirements & install
 COPY requirements.txt .
