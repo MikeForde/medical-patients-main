@@ -164,10 +164,10 @@ The easiest way to get started:
 git clone https://github.com/MikeForde/medical-patients-main.git
 cd medical-patients-main
 
-# 2. Open the project in a VS Code Dev Container (requires Docker to be running)
+# 2. BEFORE opening it as devcontainer, start the database (PostgreSQL) and cache (Redis) containers in the background
+docker compose up -d db redis   # starts only the db and redis services from the original docker-compose
 
-# 3. Start the database (PostgreSQL) and cache (Redis) containers in the background
-docker compose up -d db redis   # starts only the db and redis services from docker-compose
+# 3. THEN, open the project in a VS Code Dev Container (requires Docker to be running)
 
 # 4. Install Task (if not already installed on your system)
 ./scripts/install-task.sh
