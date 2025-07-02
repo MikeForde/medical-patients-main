@@ -15,7 +15,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
       git \
       libpq-dev gcc \
-      && rm -rf /var/lib/apt/lists/*S
+      && rm -rf /var/lib/apt/lists/*
 
 # Copy Python requirements & install
 COPY requirements.txt .
