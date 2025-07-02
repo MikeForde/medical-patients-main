@@ -34,7 +34,6 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Configuration
-COMPOSE_FILE="docker-compose.dev.yml"
 API_KEY="${API_KEY:-bUXPV0bRJp1rU40EMaVDyUgFw1aafsn}"
 MAX_HEALTH_RETRIES=30
 HEALTH_CHECK_INTERVAL=5
@@ -62,64 +61,14 @@ log_step() {
     echo "$(printf '%.0s-' {1..70})"
 }
 
-# Check prerequisites
-check_prerequisites() {
-    log_step "Checking Prerequisites"
-
-    if $IN_CONTAINER; then
-        log_info "Inside container – skipping Docker/docker-compose checks"
-    else
-        local missing_deps=()
-
-        # Check Docker
-        if ! command -v docker &>/dev/null; then
-            missing_deps+=("docker")
-        fi
-
-        # Check Docker Compose
-        if ! command -v docker compose &>/dev/null && ! command -v docker-compose &>/dev/null; then
-            missing_deps+=("docker-compose")
-        fi
-
-        # Check Node.js
-        if ! command -v node &>/dev/null; then
-            missing_deps+=("node")
-        fi
-
-        # Check npm
-        if ! command -v npm &>/dev/null; then
-            missing_deps+=("npm")
-        fi
-
-        # Check Python
-        if ! command -v python3 &>/dev/null && ! command -v python &>/dev/null; then
-            missing_deps+=("python")
-        fi
-
-        if [ ${#missing_deps[@]} -ne 0 ]; then
-            log_error "Missing required dependencies: ${missing_deps[*]}"
-            log_info "Please install the missing dependencies and try again"
-            exit 1
-        fi
-
-        # Check Docker daemon
-        if ! docker info &>/dev/null; then
-            log_error "Docker daemon is not running. Please start Docker and try again."
-            exit 1
-        fi
-    fi
-
-    log_success "All prerequisites are met"
-}
-
 # Environment validation
 validate_environment() {
     log_step "Validating Environment"
 
     # Check if we're in the correct directory
-    if [[ ! -f "package.json" ]] || [[ ! -f "requirements.txt" ]] || [[ ! -f "$COMPOSE_FILE" ]]; then
+    if [[ ! -f "package.json" ]] || [[ ! -f "requirements.txt" ]]; then
         log_error "This script must be run from the project root directory"
-        log_info "Expected files: package.json, requirements.txt, $COMPOSE_FILE"
+        log_info "Expected files: package.json, requirements.txt"
         exit 1
     fi
 
@@ -140,37 +89,6 @@ validate_environment() {
     fi
 
     log_success "Environment validation passed"
-}
-
-# Clean up previous runs
-cleanup_previous_run() {
-    log_step "Cleaning Up Previous Runs"
-
-    if $IN_CONTAINER; then
-        log_info "Inside container – skipping previous-run cleanup"
-        return
-    fi
-
-    # Stop and remove existing containers
-    if docker compose -f "$COMPOSE_FILE" ps -q | grep -q .; then
-        log_info "Stopping existing containers..."
-        docker compose -f "$COMPOSE_FILE" down --remove-orphans
-    fi
-
-    # Clean up Docker build cache (optional)
-    if [[ "${CLEAN_DOCKER_CACHE:-false}" == "true" ]]; then
-        log_info "Cleaning Docker build cache..."
-        docker builder prune -f || true
-    fi
-
-    # Clean up temporary files
-    log_info "Cleaning temporary files..."
-    rm -rf temp/* 2>/dev/null || true
-    rm -rf output/job_* 2>/dev/null || true
-    find . -name "*.pyc" -delete 2>/dev/null || true
-    find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-
-    log_success "Cleanup completed"
 }
 
 # Install and update dependencies
@@ -231,62 +149,16 @@ start_services() {
         log_info "Inside container – skip start_services (run on host)"
         return
     fi
-
-    log_info "Starting PostgreSQL and Backend services..."
-    docker compose -f "$COMPOSE_FILE" up --build -d
-
-    log_info "Services started, waiting for health checks..."
-    wait_for_services
-}
-
-# Wait for services to be healthy
-wait_for_services() {
-    local retry_count=0
-
-    log_info "Waiting for services to become healthy (max ${MAX_HEALTH_RETRIES} attempts)..."
-
-    while [[ $retry_count -lt $MAX_HEALTH_RETRIES ]]; do
-        if docker compose -f "$COMPOSE_FILE" ps app | grep -Eiq 'healthy'; then
-            log_success "Application service is healthy"
-            return 0
-        fi
-
-        retry_count=$((retry_count + 1))
-        log_info "Health check $retry_count/$MAX_HEALTH_RETRIES - waiting ${HEALTH_CHECK_INTERVAL}s..."
-        sleep $HEALTH_CHECK_INTERVAL
-    done
-
-    # Health check failed
-    log_error "Services failed to become healthy within timeout"
-    log_info "Service status:"
-    docker compose -f "$COMPOSE_FILE" ps
-
-    log_info "Application logs:"
-    docker compose -f "$COMPOSE_FILE" logs --tail=50 app
-
-    log_info "Database logs:"
-    docker compose -f "$COMPOSE_FILE" logs --tail=20 db
-
-    exit 1
 }
 
 # Run database migrations
 run_migrations() {
     log_step "Running Database Migrations"
-
-    if $IN_CONTAINER; then
-        log_info "Inside container – skip migrations (run on host)"
-        return
-    fi
-
     log_info "Applying Alembic migrations..."
-    if ! docker compose -f "$COMPOSE_FILE" exec -T app alembic upgrade head; then
+    if ! alembic upgrade head; then
         log_error "Database migration failed"
-        log_info "Database logs:"
-        docker compose -f "$COMPOSE_FILE" logs db
         exit 1
     fi
-
     log_success "Database migrations completed"
 }
 
@@ -351,28 +223,6 @@ run_hardening_checks() {
     # Check for default credentials
     if [[ "$API_KEY" == "bUXPV0bRJp1rU40EMaVDyUgFw1aafsn" ]]; then
         log_warning "SECURITY: Default API key detected - change for production!"
-    fi
-
-    # If in container then skip rest of checks
-    if $IN_CONTAINER; then
-        log_info "Inside container – skip remaining checks"
-        return
-    fi
-
-    # Check Docker resource limits
-    local memory_limit=$(docker compose -f "$COMPOSE_FILE" config | grep -A5 "deploy:" | grep "memory:" | head -1 || echo "")
-    if [[ -z "$memory_limit" ]]; then
-        log_warning "PERFORMANCE: No memory limits set for containers"
-    fi
-
-    # Check for development-only configurations
-    if docker compose -f "$COMPOSE_FILE" config | grep -q "DEBUG.*true"; then
-        log_info "DEBUG mode enabled (appropriate for development)"
-    fi
-
-    # Check database connection security
-    if docker compose -f "$COMPOSE_FILE" config | grep -q "sslmode=disable"; then
-        log_warning "SECURITY: Database SSL disabled (appropriate for development)"
     fi
 
     log_success "Hardening checks completed"
@@ -456,7 +306,6 @@ print_summary() {
     echo "   • Generate test data:   make generate-test"
     echo ""
     echo "📊 Service Status:"
-    docker compose -f "$COMPOSE_FILE" ps --format="table {{.Service}}\\t{{.Status}}\\t{{.Ports}}"
     echo -e "${NC}"
 }
 
@@ -465,7 +314,6 @@ cleanup_on_exit() {
     local exit_code=$?
     if [[ $exit_code -ne 0 ]]; then
         log_error "Setup failed with exit code $exit_code"
-        log_info "Logs available via: docker compose -f $COMPOSE_FILE logs"
     fi
 }
 
@@ -480,10 +328,6 @@ main() {
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
-        --clean)
-            CLEAN_DOCKER_CACHE=true
-            shift
-            ;;
         --test-data)
             GENERATE_TEST_DATA=true
             shift
@@ -492,17 +336,11 @@ main() {
             SKIP_SELF_TESTS=true
             shift
             ;;
-        --python-deps)
-            INSTALL_PYTHON_DEPS=true
-            shift
-            ;;
         -h | --help)
             echo "Usage: $0 [OPTIONS]"
             echo "Options:"
-            echo "  --clean        Clean Docker build cache"
             echo "  --test-data    Generate test data after setup"
             echo "  --skip-tests   Skip self-testing phase"
-            echo "  --python-deps  Install Python dependencies locally"
             echo "  -h, --help     Show this help message"
             exit 0
             ;;
@@ -514,9 +352,7 @@ main() {
     done
 
     # Execute setup steps
-    check_prerequisites
     validate_environment
-    cleanup_previous_run
     install_dependencies
     build_frontend
     start_services
