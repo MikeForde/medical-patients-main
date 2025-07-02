@@ -7,31 +7,34 @@ COPY patient-timeline-viewer/ ./
 RUN npm run build
 
 # 2) Final stage: Python + static
-FROM python:3.10-slim
+FROM python:3.10-alpine
+
 WORKDIR /app
 
-# Install OS deps
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev \
-  && rm -rf /var/lib/apt/lists/*
+# Install OS deps via apk (Musl and Pg headers)
+RUN apk add --no-cache \
+      gcc \
+      musl-dev \
+      postgresql-dev
 
-# Copy Python code
+# Copy Python requirements & install
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+ && pip install --no-cache-dir -r requirements.txt
 
+# Copy application code & migrations
 COPY src/ src/
 COPY alembic_migrations/ alembic_migrations/
 
-# Copy built React into FastAPI’s static folder
+# Copy built React into static folder
 COPY --from=ui-builder /src/timeline/dist static/timeline
 
-# Expose port and set env
-ENV PORT=8000 HOST=0.0.0.0
-ENV DATABASE_URL=postgresql://medgen_user:medgen_password@postgresql:5432/medgen_db
-ENV REDIS_URL=redis://redis-service:6379/0
+# Env defaults
+ENV HOST=0.0.0.0 \
+    PORT=8000 \
+    DATABASE_URL=postgresql://medgen_user:medgen_password@postgres-service:5432/medgen_db \
+    REDIS_URL=redis://redis-service:6379/0
 
-# Run migrations then start
+# Run migrations then start server
 CMD alembic upgrade head \
- && uvicorn src.main:app \
-      --host ${HOST} --port ${PORT} \
-      --root-path "" 
+ && uvicorn src.main:app --host ${HOST} --port ${PORT}
