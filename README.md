@@ -168,17 +168,15 @@ cd medical-patients-main
 docker compose up -d  # starts only the db and redis services from the original docker-compose
 
 # 3. THEN, open the project in a VS Code Dev Container (requires Docker to be running) - there is already a devcontainer.json config
+# This will set up python, npm/node, install the pip requirements, database migrations and install Task
 
-# 4. Install Task (if not already installed on your system)
-./scripts/install-task.sh
-
-# 5. Run setup (creates .env and runs initializations like database migrations)
+# 4. Run setup (creates .env and runs initializations like database migrations) - some of this will already have been done by the devcontainer
 task init
 
-# 6. Start the development server 
+# 5. Start the development server 
 task dev
 
-# 7. Open the web interface in your browser
+# 6. Open the web interface in your browser
 # (For example, navigate to http://localhost:8000)
 
 ```
@@ -203,7 +201,7 @@ task timeline   # Open timeline viewer (optional)
 
 💡 **Tip**: Most developers only need `task init` and `task dev`. Everything else is optional.
 
-### Manual Setup (Advanced)
+### Manual Setup - this was part of the original README but due to the devcontainer there aren't many steps left!
 
 For development without Task:
 
@@ -212,15 +210,14 @@ For development without Task:
 docker compose up -d
 
 # 2. Rebuild as a devcontainer - there is already a devcontainer.json config
+# DevContainer build will automatically install Python dependencies
+# DevContainer build will automatically run database migrations
 
-# 3. Install Python dependencies
-pip install -r requirements.txt
+# 3. Set up for .env file - use .env.example as a starter for ten (just copy it and change it to .env)
 
-# 4. Run database migrations
-alembic upgrade head
-
-# 5. Start the application
+# 4. Start the application
 uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+# or run ./start.sh
 ```
 
 #### Common Issues

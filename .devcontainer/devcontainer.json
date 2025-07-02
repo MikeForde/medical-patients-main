@@ -10,7 +10,7 @@
     }
   },
   "postCreateCommand":
-   "npm --version && node --version && python3 --version && pip install --upgrade pip && pip install -r requirements.txt && alembic upgrade head",
+   "npm --version && node --version && python3 --version && pip install --upgrade pip && pip install -r requirements.txt && alembic upgrade head && ./scripts/install-task.sh",
   "customizations": {
     "vscode": {
       "extensions": [
