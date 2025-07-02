@@ -1,6 +1,6 @@
 # Military Medical Exercise Patient Generator
 
-*This project is based on [Markus Sandelin’s **Medical Patients Generator** repository](https://github.com/banton/medical-patients). The goal of this fork is to make the environment Visual Studio Code **Dev Container** friendly and to separate the core application (Python/Node) from the database and cache services (PostgreSQL and Redis), with the latter running as separate containers. This will hopefully make for easier deployment to a rather exacting version of OpenShift*
+*This project is based on [Markus Sandelin’s **Medical Patients Generator** repository](https://github.com/banton/medical-patients). The goal of this variant is to make the environment Visual Studio Code **Dev Container** friendly and to separate the core application (Python/Node) from the database and cache services (PostgreSQL and Redis), with the latter running as separate containers. This will hopefully make for easier deployment to a rather exacting version of OpenShift*
 
 
 # Original README.md as below except where indicated.
