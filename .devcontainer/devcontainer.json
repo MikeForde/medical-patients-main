@@ -19,7 +19,7 @@
     }
   },
   "runArgs": [
-    "--network=host"
+    "--network=host",
+    "--env-file", ".env"
   ]
 }
-  
