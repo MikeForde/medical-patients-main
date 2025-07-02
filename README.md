@@ -1,12 +1,17 @@
 # Military Medical Exercise Patient Generator
 
+*This project is based on [Markus Sandelin’s **Medical Patients Generator** repository](https://github.com/banton/medical-patients). The goal of this fork is to make the environment Visual Studio Code **Dev Container** friendly and to separate the core application (Python/Node) from the database and cache services (PostgreSQL and Redis), with the latter running as separate containers.*
+
+
+# Original README.md as below except where indicated.
+
 <img src="https://milmed.tech/atlantis-logo.svg" width="250px" alt="Atlantis">
 
-A web-based application to generate realistic dummy patient data for military medical exercises. It features a highly configurable system supporting dynamic scenario definitions with temporal warfare patterns, multiple treatment facilities, all 32 NATO nations, varied injury types, environmental conditions, and realistic timeline distributions. Built with a PostgreSQL backend, comprehensive RESTful API with v1 standardization, Python SDK, and modern web interface, all following NATO medical standards.
+A web-based application to generate realistic dummy patient data for military medical exercises. It features a highly configurable system supporting dynamic scenario definitions with temporal warfare patterns, multiple treatment facilities, all 32 NATO nations, varied injury types, environmental conditions, and realistic timeline distributions. Built with a PostgreSQL backend and separate Redis caching, it offers a comprehensive RESTful API (v1 standardization), a Python SDK, and a modern web interface, all following NATO medical standards.
 
 ## Overview
 
-This application generates simulated patient data for military medical exercises with advanced temporal warfare scenario modeling. It creates realistic patient flow through dynamically configurable medical treatment facility chains (e.g., POI, R1, R2, R3, R4) with authentic timing patterns, environmental conditions, and progression statistics. The system features a temporal generation engine that models 8 distinct warfare types, special events, and environmental factors affecting casualty patterns over time. Built upon a PostgreSQL database with Alembic migrations, it offers extensive control via a RESTful API and Python SDK. The generated data complies with international medical data standards including:
+This application generates simulated patient data for military medical exercises with temporal warfare scenario modeling. It creates realistic patient flow through dynamically configurable medical treatment facility chains (e.g., POI, R1, R2, R3, R4) with authentic timing patterns, environmental conditions, and progression statistics. The system features a temporal generation engine that models 8 distinct warfare types, special events, and environmental factors affecting casualty patterns over time. Built upon a PostgreSQL database with Alembic migrations, it offers extensive control via a RESTful API and Python SDK. The generated data complies with international medical data standards including:
 
 - Minimal Core Medical Data (AMedP-8.1)
 - Medical Warning tag (AMedP-8.8)
@@ -60,15 +65,15 @@ The application features a clean, domain-driven architecture with clear separati
 
 ### Recent Architecture Improvements (June 2025)
 
-**✅ API Standardization**: Complete v1 API standardization with consistent request/response models, comprehensive validation, and proper error handling.
+**✅ API Standardization**: Complete v1 API standardization with request/response models, validation, and error handling.
 
-**✅ Background Task Processing**: Fixed patient generation workflow with proper background task execution and database configuration management.
+**✅ Background Task Processing**: Fixed patient generation workflow with background task execution and database configuration management.
 
 **✅ Clean Codebase**: Systematic removal of deprecated code, auto-generated files, and unused artifacts for a clean foundation.
 
-**✅ Enhanced Testing**: Comprehensive API contract tests ensuring reliable endpoints and proper validation.
+**✅ Enhanced Testing**: Comprehensive API contract tests ensuring reliable endpoints and validation.
 
-**✅ Modular Backend Architecture**: Clean domain-driven design with proper separation of concerns and dependency injection.
+**✅ Modular Backend Architecture**: Clean domain-driven design with separation of concerns and dependency injection.
 
 ### Application Structure
 
@@ -141,64 +146,44 @@ For detailed progress tracking, see the memory system documentation in the `memo
 
 ## Getting Started
 
-The application uses [Task](https://taskfile.dev/) for cross-platform development workflows, providing a consistent experience across macOS and Linux.
+The application uses [Task](https://taskfile.dev/).
 
 ### Prerequisites
 
-**Supported Operating Systems**: Linux (Ubuntu 22.04+, Debian 11+, RHEL 8+) and macOS (11.0+)
+- **Operating System**: Any OS that supports Docker (e.g., Windows, macOS, Linux).
+- **Tools**: Docker and Visual Studio Code (with the Remote Containers extension) installed.
 
--   [Git](https://git-scm.com/downloads) - Version control
--   [Docker Desktop](https://www.docker.com/products/docker-desktop/) - Container runtime (or Docker Engine + Docker Compose)
--   [Task](https://taskfile.dev/installation/) - Cross-platform task runner
--   [Python 3.8+](https://www.python.org/downloads/) - For local development (optional)
--   [Node.js 18+](https://nodejs.org/) - For timeline viewer (optional)
+> **Note:** All development dependencies are managed within the VS Code Dev Container, so you don’t need to install Python/Node or other libraries on your host.
 
 ### Quick Start
 
 The easiest way to get started:
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/banton/medical-patients.git
-cd medical-patients
+# 1. Clone the repository (updated to this fork)
+git clone https://github.com/MikeForde/medical-patients-main.git
+cd medical-patients-main
 
-# 2. Install Task (if needed)
-# macOS: brew install go-task
-# Linux: curl -sL https://taskfile.dev/install.sh | sh -s -- -b /usr/local/bin
+# 2. Open the project in a VS Code Dev Container (requires Docker to be running)
 
-# 3. Run setup (creates .env, starts database)
+# 3. Start the database (PostgreSQL) and cache (Redis) containers in the background
+docker compose up -d db redis   # starts only the db and redis services from docker-compose
+
+# 4. Install Task (if not already installed on your system)
+./scripts/install-task.sh
+
+# 5. Run setup (creates .env and runs initializations like database migrations)
 task init
 
-# 4. Start development server
+# 6. Start the development server 
 task dev
 
-# 5. Open http://localhost:8000
+# 7. Open the web interface in your browser
+# (For example, navigate to http://localhost:8000)
+
 ```
 
 That's it! The application is now running.
-
-### Alternative: Docker-Only Setup
-
-If you prefer everything in Docker:
-
-```bash
-task init       # Setup environment
-task start      # Run everything in Docker
-task logs       # View logs
-```
-
-### Advanced Setup Options
-
-For Ubuntu 24.04 or if you need Python virtual environments:
-```bash
-task init:full  # Full setup with OS detection and Python environment
-```
-
-**Note**: Ubuntu 24.04 users may need to activate the virtual environment first:
-```bash
-source .venv/bin/activate
-task dev
-```
 
 ### Common Commands
 
@@ -207,19 +192,13 @@ task dev
 task            # Show available commands
 task init       # First-time setup
 task dev        # Start development server
-task stop       # Stop all services
 task test       # Run tests
 
 # Additional Commands  
 task status     # Check service health
 task logs       # View application logs
 task timeline   # Open timeline viewer (optional)
-task clean      # Reset everything
 
-# Advanced Commands
-task db-reset   # Reset database (destroys data!)
-task init:full  # Full setup with Python environment
-task help:staging # Learn about staging deployment
 ```
 
 💡 **Tip**: Most developers only need `task init` and `task dev`. Everything else is optional.
@@ -233,8 +212,6 @@ For development without Task:
 docker compose up -d db redis
 
 # 2. Install Python dependencies
-python -m venv .venv
-source .venv/bin/activate
 pip install -r requirements.txt
 
 # 3. Run database migrations
@@ -244,44 +221,14 @@ alembic upgrade head
 uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Platform-Specific Notes
-
-#### Ubuntu 24.04 LTS
-Ubuntu 24.04 enforces PEP 668 which requires virtual environments. The `task init:full` command handles this automatically. If you need manual setup:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y python3-venv python3-dev libpq-dev build-essential
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
 #### Common Issues
 
-- **"externally-managed-environment" error**: Use `task init:full` or create a virtual environment manually
 - **psycopg2 installation fails**: Install `libpq-dev` with `sudo apt-get install libpq-dev`
-- **Permission denied errors**: Add user to docker group: `sudo usermod -aG docker $USER` (then logout/login)
 - **Port already in use**: Check with `sudo lsof -i :8000` and stop conflicting services
 
 ## Production Deployment
 
 The application is designed for deployment on traditional VPS infrastructure or containerized environments.
-
-### Docker Deployment
-
-```bash
-# Build production image
-docker build -t medical-patients:latest .
-
-# Run with external database
-docker run -d \
-  -p 8000:8000 \
-  -e DATABASE_URL="postgresql://user:pass@db-host:5432/medgen_db" \
-  -e API_KEY="your-secure-api-key" \
-  -e SECRET_KEY="your-secret-key" \
-  medical-patients:latest
-```
 
 ### Environment Variables
 
@@ -290,8 +237,6 @@ docker run -d \
 - `SECRET_KEY`: Application secret for session management
 - `REDIS_URL`: Redis connection (optional, for caching)
 - `ENVIRONMENT`: Set to "production" for production deployments
-
-For advanced deployment configurations, refer to the docker-compose files in the repository.
 
 ### Testing
 
@@ -551,12 +496,10 @@ military-patient-generator/
 ├── tests/                              # Test files
 ├── config.py                           # Environment configuration
 ├── Dockerfile                          # Container definition
-├── docker-compose.dev.yml              # Development environment
+├── docker-compose.dev.yml              # Development environment - for Redis and PostgreSQL
 ├── requirements.txt                    # Python dependencies
 └── package.json                        # Frontend dependencies
 ```
-
-For detailed progress tracking, see the memory system documentation in the `memory/` directory.
 
 ## React Timeline Viewer
 
@@ -649,8 +592,6 @@ This generator creates data compliant with:
 - Plugin architecture for extensible configurations
 - Advanced analytics and reporting
 
-For detailed progress tracking, see the memory system documentation in the `memory/` directory.
-
 ## Deployment Options
 
 ### Local Development (Recommended for Most Users)
@@ -667,49 +608,13 @@ This is sufficient for:
 - Running medical exercises
 - Integration testing
 
-### Production Deployment
-
-For hosting the application on a server:
-
-1. **Traditional VPS**: Deploy using Docker Compose on any Linux server
-2. **DigitalOcean App Platform**: Use the provided `staging-app-spec.yaml`
-3. **Kubernetes**: Deploy containers using the Docker images
-
-### Staging Environment (Optional)
-
-Staging deployment is **only needed** if you're planning to:
-- Test production deployment configurations
-- Validate server-specific settings
-- Run load testing before production
-
-To use staging:
-1. Create `.env.staging` with production-like settings
-2. Run `task staging:up` to start on port 8001
-3. Test your deployment configuration
-4. Use `task staging:down` when finished
-
-**Note**: Most users don't need staging. The `task dev` command provides a complete development environment.
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-### Git Workflow
-
-This project follows a structured Git workflow, including a specific branching model, commit message conventions, and Pull Request (PR) processes. The core branches are:
-
--   **`main`**: Stable, production-ready code.
--   **`develop`**: Primary integration branch for ongoing development.
--   **Feature Branches** (e.g., `feature/TICKET-ID-short-description`): For new features, bugs, or tasks.
--   **Release Branches** (e.g., `release/vX.Y.Z`): For preparing releases.
--   **Hotfix Branches** (e.g., `hotfix/TICKET-ID-short-description`): For critical production fixes.
-
-For complete details on the branching strategy, commit message format, PR process, testing requirements, and release procedures, please refer to the Git Workflow documentation in the `memory/` directory.
-
 ### Key Development Files
 
 - `.gitignore`: Specifies intentionally untracked files that Git should ignore. This has been recently updated to include common OS-generated files, Node.js artifacts, and log files.
-- `memory/`: Stores contextual information about the project including patterns, implementations, and architectural decisions.
 
 ## License
 
@@ -719,3 +624,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - This tool was developed to support NATO medical interoperability exercises
 - Special thanks to the medical subject matter experts who provided guidance on realistic patient flow and treatment scenarios
+- This specific variation on the original tool was developed for easier deployment to a rather exacting version of OpenShift! :-)
