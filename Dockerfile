@@ -16,6 +16,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
  && pip install --no-cache-dir -r requirements.txt
 
+ # Copy Alembic config so `alembic upgrade head` knows where to find the migrations
+ COPY alembic.ini .
+
 # Copy application code & migrations
 COPY src/ src/
 COPY alembic_migrations/ alembic_migrations/
