@@ -33,5 +33,4 @@ ENV HOST=0.0.0.0 \
     REDIS_URL=redis://redis:6379/0
 
 # Run migrations then start server
-ENTRYPOINT []
-CMD ["sh", "-c", "uvicorn src.main:app --host ${HOST} --port ${PORT}"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
