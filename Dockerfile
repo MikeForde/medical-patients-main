@@ -32,3 +32,7 @@ ENV HOST=0.0.0.0 \
     DATABASE_URL=postgresql://medgen_user:medgen_password@postgres-service:5432/medgen_db \
     REDIS_URL=redis://redis-service:6379/0
 
+# Run migrations then start server
+ENTRYPOINT []
+CMD ["sh", "-c", "alembic upgrade head && uvicorn src.main:app --host ${HOST} --port ${PORT}"]
+
