@@ -11,25 +11,16 @@ FROM image-registry.openshift-image-registry.svc:5000/openshift/python@sha256:6f
 
 WORKDIR /app
 
-# Copy Python requirements & install
-COPY requirements.txt .
+# 1) copy *everything* in your repo into /app
+COPY . .
+
+# 2) install deps
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
  && pip install --no-cache-dir -r requirements.txt
 
- # Copy Alembic config so `alembic upgrade head` knows where to find the migrations
- COPY alembic.ini .
+# 3) run migrations & start your API server
+ENTRYPOINT ["sh", "-c"]
+CMD ["alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"]
 
-# Copy application code & migrations
-COPY src/ src/
-COPY alembic_migrations/ alembic_migrations/
-
-# Copy built React into static folder
-COPY --from=ui-builder /src/timeline/dist static/timeline
-
-# Env defaults
-ENV HOST=0.0.0.0 \
-    PORT=8000 \
-    DATABASE_URL=postgresql://medgen_user:medgen_password@postgres-service:5432/medgen_db \
-    REDIS_URL=redis://redis-service:6379/0
     
 
