@@ -16,12 +16,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
  && pip install --no-cache-dir -r requirements.txt
 
- # Copy Alembic config so `alembic upgrade head` knows where to find the migrations
- COPY alembic.ini .
-
-# Copy application code & migrations
+# Copy Python application code
 COPY src/ src/
-COPY alembic_migrations/ alembic_migrations/
+COPY patient_generator/ patient_generator/
+COPY static/ static/
+COPY config.py .
+
 
 # Copy built React into static folder
 COPY --from=ui-builder /src/timeline/dist static/timeline
@@ -34,4 +34,4 @@ ENV HOST=0.0.0.0 \
 
 # Run migrations then start server
 ENTRYPOINT []
-CMD ["sh", "-c", "alembic upgrade head && uvicorn src.main:app --host ${HOST} --port ${PORT}"]
+CMD ["sh", "-c", "uvicorn src.main:app --host ${HOST} --port ${PORT}"]

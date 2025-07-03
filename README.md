@@ -500,7 +500,7 @@ military-patient-generator/
 ├── tests/                              # Test files
 ├── config.py                           # Environment configuration
 ├── Dockerfile                          # Container definition
-├── docker-compose.dev.yml              # Development environment - for Redis and PostgreSQL
+├── docker-compose.yml                  # Development environment - for Redis and PostgreSQL
 ├── requirements.txt                    # Python dependencies
 └── package.json                        # Frontend dependencies
 ```

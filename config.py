@@ -16,7 +16,7 @@ class Settings:
 
     # Database
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", "postgresql://patient_user:patient_pass@localhost:5432/patient_generator"
+        "DATABASE_URL", "postgresql://patient_user:patient_pass@localhost:5432/medgen_db"
     )
 
     # Application
