@@ -18,6 +18,13 @@ COPY . .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
  && pip install --no-cache-dir -r requirements.txt
 
+
+# Copy built timeline into a static folder
+COPY --from=ui-builder /src/timeline/dist static/timeline
+
+# Expose the port you’ll serve on
+EXPOSE 8000
+
 # 3) run migrations & start your API server
 ENTRYPOINT ["sh", "-c"]
 CMD ["alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"]
