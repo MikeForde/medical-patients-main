@@ -11,6 +11,13 @@ FROM image-registry.openshift-image-registry.svc:5000/openshift/python@sha256:6f
 
 WORKDIR /app
 
+# Create writable output & temp directories for the non-root user
+USER root
+RUN mkdir -p output temp \
+ && chown -R 1001:0 output temp
+# back to the default unprivileged user
+USER 1001
+
 # Copy Python requirements & install
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
