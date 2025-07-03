@@ -33,5 +33,6 @@ ENV HOST=0.0.0.0 \
     REDIS_URL=redis://redis-service:6379/0
 
 # Run migrations then start server
-CMD alembic upgrade head \
- && uvicorn src.main:app --host ${HOST} --port ${PORT}
+ENTRYPOINT []
+CMD ["sh", "-c", "alembic upgrade head && uvicorn src.main:app --host ${HOST} --port ${PORT}"]
+
