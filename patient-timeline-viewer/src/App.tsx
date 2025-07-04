@@ -222,7 +222,7 @@ function App() {
         <div className="w-full px-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-gray-900">
-              Patient Timeline Visualizer
+              Patient Timeline Visualizer by Markus Sandelin <small className="text-xs text-gray-500">- D2S/DevContainer Version</small>
             </h1>
             <p className="text-sm text-gray-600">
               Military Medical Evacuation Flow Simulator
