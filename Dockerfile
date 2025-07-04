@@ -11,11 +11,10 @@ FROM image-registry.openshift-image-registry.svc:5000/openshift/python@sha256:6f
 
 WORKDIR /app
 
-# Create writable output & temp directories for the non-root user
+# Create writable output & temp directories for any non-root UID
 USER root
 RUN mkdir -p output temp \
- && chown -R 1001:0 output temp
-# back to the default unprivileged user
+ && chmod -R 0777 output temp
 USER 1001
 
 # Copy Python requirements & install
@@ -39,5 +38,5 @@ ENV HOST=0.0.0.0 \
     DATABASE_URL=postgresql://medgen_user:medgen_password@postgres:5432/medgen_db \
     REDIS_URL=redis://redis:6379/0
 
-# Run migrations then start server
+# start server
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
