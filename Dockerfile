@@ -25,6 +25,9 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
 # Copy Python application code
 COPY src/ src/
 COPY patient_generator/ patient_generator/
+USER root
+RUN chmod -R g+w /app/patient_generator
+USER 1001
 COPY static/ static/
 COPY config.py .
 
