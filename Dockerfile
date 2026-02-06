@@ -1,5 +1,5 @@
 # 1) Build stage for timeline viewer
-FROM node:22-alpine AS ui-builder
+FROM image-registry.openshift-image-registry.svc:5000/uksc-medsnomed-medsno/node:22-alpine AS ui-builder
 WORKDIR /src/timeline
 COPY patient-timeline-viewer/package*.json ./
 RUN npm ci
