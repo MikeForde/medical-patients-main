@@ -1,6 +1,12 @@
 # 1) Build stage for timeline viewer
 FROM image-registry.openshift-image-registry.svc:5000/openshift/nodejs:20-ubi9 AS ui-builder
+
+# Node UBI images run as non-root (typically 1001), so make the workdir writable.
+USER root
 WORKDIR /src/timeline
+RUN mkdir -p /src/timeline && chown -R 1001:0 /src/timeline
+USER 1001
+
 COPY patient-timeline-viewer/package*.json ./
 RUN npm ci
 COPY patient-timeline-viewer/ ./
