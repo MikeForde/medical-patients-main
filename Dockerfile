@@ -10,6 +10,10 @@ USER 1001
 COPY patient-timeline-viewer/package*.json ./
 RUN npm ci
 COPY patient-timeline-viewer/ ./
+
+# ✅ OpenSSL 3 compatibility for toolchains that still use legacy hashes
+ENV NODE_OPTIONS=--openssl-legacy-provider
+
 RUN npm run build
 
 # 2) Final stage: Python + static
