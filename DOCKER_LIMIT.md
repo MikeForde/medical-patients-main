@@ -221,7 +221,3 @@ image-registry.openshift-image-registry.svc:5000
 - Treat the Docker Hub PAT as a secret; rotate it periodically.
 - Prefer importing frequently-used base images (`node`, `python`, `ubi`, etc.) into ImageStreams for stability.
 - If multiple namespaces need the same base images, consider a shared “tools” namespace pattern (organisation-dependent).
-
----
-
-If you want, paste your exact BuildConfig strategy (Docker vs Buildah vs Pipeline), and this guide can be tailored further for your setup.
