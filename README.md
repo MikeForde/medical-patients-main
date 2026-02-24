@@ -2,6 +2,98 @@
 
 *This project is based on [Markus Sandelin’s **Medical Patients Generator** repository](https://github.com/banton/medical-patients). The goal of this variant is to make the environment Visual Studio Code **Dev Container** friendly and to separate the core application (Python/Node) from the database and cache services (PostgreSQL and Redis), with the latter running as separate containers. This will hopefully make for easier deployment to a rather exacting version of OpenShift*
 
+# Running Alembic Migrations Against OpenShift PostgreSQL
+
+## ⚠️ Important
+
+All Alembic migrations targeting the OpenShift PostgreSQL instance
+**must be run from inside the VSCode devcontainer** and **via an active
+`oc port-forward` connection**.
+
+This avoids networking issues between host, container, and cluster.
+
+------------------------------------------------------------------------
+
+## Step-by-Step Procedure
+
+### 1️⃣ Start OpenShift Port Forward (from your host machine)
+
+``` bash
+oc -n uksc-medsnomed-medsno port-forward svc/postgresql15 5432:5432
+```
+
+You should see:
+
+    Forwarding from 127.0.0.1:5432 -> 5432
+
+Leave this terminal running.
+
+------------------------------------------------------------------------
+
+### 2️⃣ Ensure the Devcontainer Uses the Forwarded Port
+
+Inside the devcontainer, the database host must be:
+
+    host.docker.internal
+
+Set the environment variable:
+
+``` bash
+export DATABASE_URL='postgresql://medgen_user:medgen_password@host.docker.internal:5432/medgen_db'
+```
+
+------------------------------------------------------------------------
+
+### 3️⃣ Run Alembic from Inside the Devcontainer
+
+``` bash
+alembic current
+alembic heads
+alembic upgrade head
+```
+
+You should see migrations executing and the final revision marked as
+`(head)`.
+
+------------------------------------------------------------------------
+
+## Verification
+
+Confirm the database is at head:
+
+``` bash
+alembic current
+alembic heads
+```
+
+Both values should match.
+
+------------------------------------------------------------------------
+
+## Common Pitfalls
+
+-   ❌ Do NOT use `localhost` inside the devcontainer --- use
+    `host.docker.internal`.
+-   ❌ If the `oc port-forward` process stops, DB connections will fail.
+
+------------------------------------------------------------------------
+
+## Recommended Devcontainer Setup
+
+To avoid exporting the variable each time, add this to
+`devcontainer.json`:
+
+``` json
+"remoteEnv": {
+  "DATABASE_URL": "postgresql://medgen_user:medgen_password@host.docker.internal:5432/medgen_db"
+}
+```
+
+------------------------------------------------------------------------
+
+Keeping migrations disciplined ensures schema consistency across local,
+OpenShift, and CI environments.
+
 
 # Original README.md as below except where indicated.
 
