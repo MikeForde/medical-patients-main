@@ -47,6 +47,8 @@ class Config {
             return 'staging';
         } else if (hostname === 'milmed.tech' || hostname === 'patients.milmed.tech') {
             return 'production';
+        } else if (hostname === 'medical-patients-main-uksc-medsnomed-medsno.apps.ocp1.azure.dso.digital.mod.uk') {
+            return 'production';
         } else {
             console.warn(`Unknown hostname: ${hostname}, defaulting to local config`);
             return 'local';
