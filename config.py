@@ -58,6 +58,12 @@ class Settings:
                 "Using default API key. Set API_KEY environment variable for production.", UserWarning, stacklevel=2
             )
 
+        # Allow the standalone timeline viewer dev server to access the API.
+        if any(origin in cls.CORS_ORIGINS for origin in ["http://localhost:8000", "http://127.0.0.1:8000"]):
+            for viewer_origin in ["http://localhost:5174", "http://127.0.0.1:5174"]:
+                if viewer_origin not in cls.CORS_ORIGINS:
+                    cls.CORS_ORIGINS.append(viewer_origin)
+
         # Ensure directories exist
         os.makedirs(cls.OUTPUT_DIRECTORY, exist_ok=True)
         os.makedirs(cls.TEMP_DIRECTORY, exist_ok=True)

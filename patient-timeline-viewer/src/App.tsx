@@ -5,6 +5,7 @@ import { FileUploader } from './components/FileUploader';
 import { FacilityColumn } from './components/FacilityColumn';
 import { TimelineControls } from './components/TimelineControls';
 import { FilterBar, FilterState, filterPatients, initialFilterState } from './components/FilterBar';
+import { loadPatientsFromData } from './utils/patientDataLoader';
 import { getTimelineExtent } from './utils/timelineEngine';
 import './index.css';
 
@@ -12,6 +13,9 @@ const FACILITIES: FacilityName[] = ['POI', 'Role1', 'Role2', 'Role3', 'Role4'];
 
 function App() {
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [isRemoteLoading, setIsRemoteLoading] = useState(false);
+  const [remoteError, setRemoteError] = useState<string | null>(null);
+  const [dataSourceLabel, setDataSourceLabel] = useState<string | null>(null);
   const [playbackState, setPlaybackState] = useState<PlaybackState>({
     isPlaying: false,
     currentTime: new Date('2024-01-01T00:00:00Z'),
@@ -39,6 +43,75 @@ function App() {
       }));
     }
   }, [patients]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const jobId = searchParams.get('jobId');
+    const apiBaseUrl = searchParams.get('apiBaseUrl');
+
+    if (!jobId || !apiBaseUrl) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadRemotePatients = async () => {
+      setIsRemoteLoading(true);
+      setRemoteError(null);
+
+      try {
+        const normalizedBaseUrl = apiBaseUrl.replace(/\/$/, '');
+
+        const configResponse = await fetch(`${normalizedBaseUrl}/api/v1/config/frontend`);
+        if (!configResponse.ok) {
+          throw new Error('Unable to load backend frontend configuration');
+        }
+
+        const frontendConfig = await configResponse.json();
+        const resultsResponse = await fetch(
+          `${normalizedBaseUrl}/api/v1/downloads/${encodeURIComponent(jobId)}?format=json`,
+          {
+            headers: {
+              'X-API-Key': frontendConfig.apiKey
+            }
+          }
+        );
+
+        if (!resultsResponse.ok) {
+          let detail = 'Failed to load generated patient data';
+          try {
+            const errorBody = await resultsResponse.json();
+            detail = errorBody.detail || errorBody.message || detail;
+          } catch {
+            // Keep the generic error if the response body is not JSON.
+          }
+          throw new Error(detail);
+        }
+
+        const data = await resultsResponse.json();
+        const loadedPatients = loadPatientsFromData(data);
+
+        if (!isCancelled) {
+          setPatients(loadedPatients);
+          setDataSourceLabel(`Loaded from generator job ${jobId}`);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setRemoteError(error instanceof Error ? error.message : 'Failed to load remote patient data');
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsRemoteLoading(false);
+        }
+      }
+    };
+
+    loadRemotePatients();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   // Timeline playback effect
   useEffect(() => {
@@ -118,8 +191,20 @@ function App() {
 
   const handleLoadPatients = (loadedPatients: Patient[]) => {
     setPatients(loadedPatients);
+    setRemoteError(null);
+    setDataSourceLabel('Loaded from local file');
     console.log(`Loaded ${loadedPatients.length} patients`);
   };
+
+  const generatorUrl = useMemo(() => {
+    const { protocol, hostname, port } = window.location;
+
+    if (port === '5174') {
+      return `${protocol}//${hostname}:8000/static/index.html`;
+    }
+
+    return '/static/index.html';
+  }, []);
 
   const handleClearFilters = () => {
     setFilters(initialFilterState);
@@ -240,12 +325,20 @@ function App() {
       <header className="bg-white shadow-sm border-b border-gray-200 p-2">
         <div className="w-full px-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900">
-              Patient Timeline Visualizer by Markus Sandelin <small className="text-xs text-gray-500">- D2S/DevContainer Version - 18 Apr 2026</small>
-            </h1>
-            <p className="text-sm text-gray-600">
-              Military Medical Evacuation Flow Simulator
-            </p>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">
+                Patient Timeline Visualizer by Markus Sandelin <small className="text-xs text-gray-500">- D2S/DevContainer Version - 18 Apr 2026</small>
+              </h1>
+              <p className="text-sm text-gray-600">
+                Military Medical Evacuation Flow Simulator
+              </p>
+            </div>
+            <a
+              href={generatorUrl}
+              className="inline-flex items-center rounded-md border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-100"
+            >
+              Back to Generator
+            </a>
           </div>
         </div>
       </header>
@@ -254,22 +347,34 @@ function App() {
       <main className="flex-1 flex flex-col overflow-hidden">
         {patients.length === 0 ? (
           // File upload state
-          <div className="flex-1 flex items-center justify-center">
-            <div className="max-w-2xl w-full px-4">
-              <FileUploader onLoad={handleLoadPatients} />
-              
-              {/* Instructions */}
-              <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="font-semibold text-blue-900 mb-3">How to use:</h3>
-                <ol className="list-decimal list-inside space-y-2 text-blue-800 text-sm">
-                  <li>Generate patient data from the main application</li>
-                  <li>Download the patients.json file</li>
-                  <li>Upload the file using the drag-and-drop area above</li>
-                  <li>Use the timeline controls to visualize patient flow</li>
-                  <li>Watch patients move through POI → Role1 → Role2 → Role3 → Role4</li>
-                </ol>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="max-w-2xl w-full px-4">
+                <FileUploader onLoad={handleLoadPatients} isLoading={isRemoteLoading} />
+
+                {isRemoteLoading && (
+                  <div className="mt-4 rounded-lg border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-800">
+                    Loading generated patient data directly from the main application...
+                  </div>
+                )}
+
+                {remoteError && (
+                  <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    {remoteError}
+                  </div>
+                )}
+                
+                {/* Instructions */}
+                <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <h3 className="font-semibold text-blue-900 mb-3">How to use:</h3>
+                  <ol className="list-decimal list-inside space-y-2 text-blue-800 text-sm">
+                    <li>Generate patient data from the main application</li>
+                    <li>Use the new direct handoff from the generator, or download the patients.json file</li>
+                    <li>Upload the file using the drag-and-drop area above if you are loading manually</li>
+                    <li>Use the timeline controls to visualize patient flow</li>
+                    <li>Watch patients move through POI → Role1 → Role2 → Role3 → Role4</li>
+                  </ol>
+                </div>
               </div>
-            </div>
           </div>
         ) : (
           // Timeline visualization
@@ -282,6 +387,11 @@ function App() {
                     <span className="font-medium">
                       Showing: {statistics.filtered}/{statistics.total}
                     </span>
+                    {dataSourceLabel && (
+                      <span className="text-gray-500">
+                        {dataSourceLabel}
+                      </span>
+                    )}
                     <div className="flex space-x-2">
                       <span className="text-red-600">
                         KIA: {statistics.currentStatuses.KIA}

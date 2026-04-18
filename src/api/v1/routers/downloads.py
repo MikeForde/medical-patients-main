@@ -16,6 +16,28 @@ from src.core.exceptions import JobNotFoundError, StorageError
 from src.core.security_enhanced import verify_api_key
 from src.domain.services.job_service import JobService
 
+
+def _get_preferred_json_result_file(output_files) -> Optional[Path]:
+    """Pick the main patient JSON output and avoid auxiliary JSON files."""
+    candidates = []
+    for output_path in output_files or []:
+        path = Path(output_path)
+        if path.suffix == ".json" and path.exists():
+            candidates.append(path)
+
+    if not candidates:
+        return None
+
+    exact_match = next((path for path in candidates if path.name == "patients.json"), None)
+    if exact_match:
+        return exact_match
+
+    generated_match = next((path for path in candidates if path.name.startswith("patients_")), None)
+    if generated_match:
+        return generated_match
+
+    return candidates[0]
+
 # Router configuration with v1 prefix and standardized responses
 router = APIRouter(
     prefix="/downloads",
@@ -72,12 +94,7 @@ async def download_job_results(
 
         # Raw JSON mode: return patients.json directly without ZIP wrapping
         if format == "json":
-            json_file = None
-            for output_path in job.result_files or []:
-                p = Path(output_path)
-                if p.suffix == ".json" and p.exists():
-                    json_file = p
-                    break
+            json_file = _get_preferred_json_result_file(job.result_files)
             if json_file is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,

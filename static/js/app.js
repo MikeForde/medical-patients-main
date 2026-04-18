@@ -87,6 +87,8 @@ class PatientGeneratorApp {
         // Load initial data
         await this.loadInitialData();
 
+        this.configureCrossLinks();
+
         // Initialize configuration history display
         this.updateConfigHistoryDisplay();
 
@@ -222,6 +224,42 @@ class PatientGeneratorApp {
             console.error('Failed to load initial data:', error);
             this.showError(`Failed to connect to API: ${error.message}`);
         }
+    }
+
+    getTimelineViewerBaseUrl() {
+        const { protocol, hostname, port } = window.location;
+
+        if (port === '5174') {
+            return `${protocol}//${hostname}:5174/`;
+        }
+
+        if (port === '8000' || port === '') {
+            return `${protocol}//${hostname}:5174/`;
+        }
+
+        return `${protocol}//${hostname}:5174/`;
+    }
+
+    getTimelineViewerUrl(jobId = null) {
+        const url = new URL(this.getTimelineViewerBaseUrl());
+
+        if (jobId) {
+            url.searchParams.set('jobId', jobId);
+            url.searchParams.set('apiBaseUrl', window.location.origin);
+        }
+
+        return url.toString();
+    }
+
+    configureCrossLinks() {
+        const timelineViewerLink = document.getElementById('timelineViewerLink');
+        if (timelineViewerLink) {
+            timelineViewerLink.href = this.getTimelineViewerUrl();
+        }
+    }
+
+    openTimelineViewer(jobId = null) {
+        window.open(this.getTimelineViewerUrl(jobId), '_blank', 'noopener,noreferrer');
     }
 
     async loadNationalityData() {
@@ -813,10 +851,16 @@ class PatientGeneratorApp {
                     Download Results
                 </h4>
                 <p>Your generated patient data is ready for download:</p>
-                <button onclick="app.downloadResults('${this.currentJobId}')" class="download-link">
-                    <i class="fas fa-download mr-2"></i>
-                    Download Patient Data (ZIP)
-                </button>
+                <div class="download-actions">
+                    <button onclick="app.downloadResults('${this.currentJobId}')" class="download-link">
+                        <i class="fas fa-download mr-2"></i>
+                        Download Patient Data (ZIP)
+                    </button>
+                    <button onclick="app.openTimelineViewer('${this.currentJobId}')" class="download-link download-link--viewer">
+                        <i class="fas fa-project-diagram mr-2"></i>
+                        Open in Timeline Viewer
+                    </button>
+                </div>
                 <div class="download-info">
                     <div class="info-item">
                         <i class="fas fa-hdd text-slate-500 mr-1"></i>
@@ -1315,6 +1359,7 @@ let app;
 document.addEventListener('DOMContentLoaded', async () => {
     app = new PatientGeneratorApp();
     await app.init();
+    window.app = app;
 });
 
 // Make app globally available for debugging and download function
