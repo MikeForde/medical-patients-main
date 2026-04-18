@@ -4,6 +4,7 @@ Replaces the old /api/generate endpoint with /api/v1/generation/.
 """
 
 import json
+import logging
 import os
 from pathlib import Path
 import shutil
@@ -24,6 +25,8 @@ from src.domain.models.job import JobStatus
 from src.domain.services.job_service import JobService
 from src.domain.services.patient_generation_service import AsyncPatientGenerationService, GenerationContext
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(
     prefix="/generation",
     tags=["generation"],
@@ -43,14 +46,28 @@ security = HTTPBearer()
     status_code=status.HTTP_201_CREATED,
     summary="Generate Patients",
     description="""
-    Start a new patient generation job with the specified configuration.
+    Start a new patient generation job with advanced medical simulation features.
 
-    You can either:
-    - Use an existing configuration by providing `configuration_id`
-    - Provide an inline configuration using the `configuration` field
+    ## Configuration Options:
+    - **configuration_id**: Use a saved configuration from the database
+    - **configuration**: Provide inline configuration with full control
 
-    The endpoint returns immediately with a job ID for tracking progress.
-    Use the job endpoints to monitor generation status and download results.
+    ## Key Configuration Fields:
+    - **total_patients**: Number of patients to generate (1-10000)
+    - **injury_mix**: Distribution of Disease, Non-Battle, and Battle injuries
+    - **warfare_types**: Active combat scenarios (conventional, artillery, urban, etc.)
+    - **medical_simulation**: Enable advanced features (TUM, diagnostic uncertainty, Markov routing)
+    - **advanced_overrides**: Fine-tune scenario intensity, tempo, and medical parameters
+
+    ## Scenario Modifiers (in advanced_overrides):
+    - **intensity**: Controls casualty severity (low/medium/high/extreme)
+    - **tempo**: Controls distribution pattern (sustained/escalating/surge/declining)
+    - **special_events**: Triggers mass casualty events
+    - **environmental_conditions**: Applies weather and terrain effects
+
+    The endpoint returns immediately with a job ID. Poll `/api/v1/jobs/{job_id}` for status.
+
+    See full documentation at `/docs` or `API_DOCUMENTATION.md` for detailed parameter explanations.
     """,
     response_description="Generation job created successfully",
 )
@@ -79,15 +96,19 @@ async def generate_patients(
             config_dict = request.configuration.copy()
 
         # Add generation parameters to config
-        config_dict.update(
-            {
-                "output_formats": request.output_formats,
-                "use_compression": request.use_compression,
-                "use_encryption": request.use_encryption,
-                "encryption_password": request.encryption_password,
-                "priority": request.priority,
-            }
-        )
+        update_dict = {
+            "output_formats": request.output_formats,
+            "use_compression": request.use_compression,
+            "use_encryption": request.use_encryption,
+            "encryption_password": request.encryption_password,
+            "priority": request.priority,
+        }
+
+        # Only add total_patients if it's provided as an override
+        if request.total_patients is not None:
+            update_dict["total_patients"] = request.total_patients
+
+        config_dict.update(update_dict)
 
         # Create job
         job = await job_service.create_job(config=config_dict)
@@ -173,17 +194,19 @@ async def _run_generation_task(
         # Handle temporal configuration if present
         # Check both root level and nested configuration object
         inner_config = config.get("configuration", config)
+
+        # Log configuration details for debugging
+        logger.debug("Config type: %s", type(inner_config).__name__)
+        logger.debug("total_patients value: %s", inner_config.get("total_patients"))
+
         temporal_config_present = any(
             key in inner_config for key in ["warfare_types", "environmental_conditions", "special_events", "base_date"]
         )
 
-        print(f"🔍 TEMPORAL DEBUG: Root config keys: {list(config.keys())}")
-        print(f"🔍 TEMPORAL DEBUG: Inner config keys: {list(inner_config.keys())}")
-        print(f"🔍 TEMPORAL DEBUG: Detection result: {temporal_config_present}")
+        logger.debug("Temporal config detected: %s", temporal_config_present)
         if temporal_config_present:
-            print(
-                f"🔍 TEMPORAL DEBUG: Found temporal keys: {[k for k in ['warfare_types', 'environmental_conditions', 'special_events', 'base_date'] if k in inner_config]}"
-            )
+            temporal_keys = [k for k in ["warfare_types", "environmental_conditions", "special_events", "base_date"] if k in inner_config]
+            logger.debug("Found temporal keys: %s", temporal_keys)
 
         if temporal_config_present:
             # Write temporal configuration to injuries.json for flow simulator
@@ -230,9 +253,8 @@ async def _run_generation_task(
             with open(injuries_path, "w") as f:
                 json.dump(temporal_injuries_config, f, indent=2)
 
-            print("✅ Temporal configuration written to injuries.json")
-            print(f"   Warfare types: {[k for k, v in temporal_injuries_config['warfare_types'].items() if v]}")
-            print(f"   Base date: {temporal_injuries_config['base_date']}")
+            active_warfare = [k for k, v in temporal_injuries_config["warfare_types"].items() if v]
+            logger.info("Temporal config written - warfare: %s, base_date: %s", active_warfare, temporal_injuries_config["base_date"])
 
         # Handle configuration source
         db_instance = Database.get_instance()
@@ -254,7 +276,7 @@ async def _run_generation_task(
             config_create = ConfigurationTemplateCreate(
                 name=inner_config.get("name", "Generated Configuration"),
                 description=inner_config.get("description", "Auto-generated configuration"),
-                total_patients=inner_config.get("count", inner_config.get("total_patients", 10)),
+                total_patients=inner_config.get("total_patients", inner_config.get("count", 10)),
                 injury_distribution=injury_dist,
                 front_configs=inner_config.get("front_configs", []),
                 facility_configs=inner_config.get("facility_configs", []),
@@ -262,6 +284,18 @@ async def _run_generation_task(
 
             # Save to database
             config_template = config_repo.create_configuration(config_create)
+
+        # Override total_patients: root-level config (from request.total_patients) wins
+        # over anything set inside the inline configuration object.
+        override_total = config.get("total_patients") or inner_config.get("total_patients")
+        if override_total is not None:
+            # Create a copy of the config template with overridden total_patients
+            config_dict = (
+                config_template.dict() if hasattr(config_template, "dict") else config_template.__dict__.copy()
+            )
+            config_dict["total_patients"] = override_total
+            # Convert back to the same type as config_template
+            config_template = type(config_template)(**config_dict)
 
         # Create generation context
         generation_context = GenerationContext(
@@ -289,7 +323,7 @@ async def _run_generation_task(
             try:
                 config_repo.delete_configuration(config_template.id)
             except Exception as e:
-                print(f"Warning: Could not clean up temporary configuration {config_template.id}: {e}")
+                logger.warning("Could not clean up temporary configuration %s: %s", config_template.id, e)
 
         # Restore original injuries.json if we modified it
         if temporal_config_present:
@@ -300,9 +334,9 @@ async def _run_generation_task(
 
             if os.path.exists(backup_path):
                 shutil.move(backup_path, injuries_path)
-                print("✅ Restored original injuries.json")
+                logger.debug("Restored original injuries.json")
             else:
-                print("⚠️  No backup found to restore injuries.json")
+                logger.warning("No backup found to restore injuries.json")
 
         # Update job with results
         await job_service.set_job_results(
@@ -328,14 +362,14 @@ async def _run_generation_task(
 
                 if os.path.exists(backup_path):
                     shutil.move(backup_path, injuries_path)
-                    print("✅ Restored original injuries.json after failure")
+                    logger.debug("Restored original injuries.json after failure")
             except Exception as cleanup_error:
-                print(f"⚠️  Failed to restore injuries.json: {cleanup_error}")
+                logger.error("Failed to restore injuries.json: %s", cleanup_error)
 
         # Mark job as failed
         await job_service.update_job_status(job_id, JobStatus.FAILED, error=str(e))
-        print(f"Generation task failed for job {job_id}: {e}")
-        traceback.print_exc()
+        logger.error("Generation task failed for job %s: %s", job_id, e)
+        logger.debug("Traceback: %s", traceback.format_exc())
 
 
 @router.post(

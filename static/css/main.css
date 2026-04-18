@@ -25,6 +25,12 @@ body {
     font-family: var(--font-family);
 }
 
+.version-label {
+    font-size: 60%;
+    line-height: 1;
+    color: #6b7280;
+}
+
 /* Generate Button - Modern Design */
 .generate-button {
     background: linear-gradient(135deg, var(--success) 0%, #059669 100%);

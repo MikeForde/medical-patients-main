@@ -2,7 +2,7 @@
  * Simple Military Patient Generator Application
  */
 
-const API_KEY = 'bUXPV0bRJp1rU40EMaVDyUgFw1aafsn';
+let apiKey = null;
 
 // Default configuration based on JSON files
 const DEFAULT_CONFIG = {
@@ -94,7 +94,7 @@ let pollInterval = null;
 /**
  * Initialize the application
  */
-function init() {
+async function init() {
     // Get DOM elements
     generateBtn = document.getElementById('generateBtn');
     statusBox = document.getElementById('statusBox');
@@ -103,8 +103,20 @@ function init() {
     progressContainer = document.getElementById('progressContainer');
     downloadContainer = document.getElementById('downloadContainer');
 
+    apiKey = window.config?.apiKey || (await fetchApiKeyFromBackend());
+
     // Set up event listeners
     generateBtn.addEventListener('click', handleGenerate);
+}
+
+async function fetchApiKeyFromBackend() {
+    const response = await fetch('/api/v1/config/frontend');
+    if (!response.ok) {
+        throw new Error('Unable to load frontend API configuration');
+    }
+
+    const backendConfig = await response.json();
+    return backendConfig.apiKey;
 }
 
 /**
@@ -170,13 +182,14 @@ async function handleGenerate() {
 
         // Get configuration from accordion panels
         const configuration = getConfigurationFromPanels();
+        const currentApiKey = apiKey || window.config?.apiKey || (await fetchApiKeyFromBackend());
 
         // Make API request
         const response = await fetch('/api/v1/generation/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-Key': API_KEY
+                'X-API-Key': currentApiKey
             },
             body: JSON.stringify({
                 configuration: configuration,
@@ -211,7 +224,7 @@ function pollJobStatus() {
         try {
             const response = await fetch(`/api/v1/jobs/${currentJobId}`, {
                 headers: {
-                    'X-API-Key': API_KEY
+                    'X-API-Key': apiKey || window.config?.apiKey
                 }
             });
 
@@ -282,7 +295,7 @@ async function downloadResults(jobId) {
     try {
         const response = await fetch(`/api/v1/downloads/${jobId}`, {
             headers: {
-                'X-API-Key': API_KEY
+                'X-API-Key': apiKey || window.config?.apiKey
             }
         });
 

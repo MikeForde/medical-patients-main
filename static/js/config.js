@@ -20,32 +20,21 @@ class Config {
     }
 
     async _initializeApiKey() {
-        // Only fetch API key from backend in production
-        if (this.environment === 'production') {
-            try {
-                const response = await fetch('/api/v1/config/frontend');
-                if (response.ok) {
-                    const backendConfig = await response.json();
-                    this.config.apiKey = backendConfig.apiKey;
-                    console.log('🔑 API key fetched from backend');
-
-                    // Notify that config is ready
-                    if (window.dispatchEvent) {
-                        window.dispatchEvent(new CustomEvent('configReady'));
-                    }
-                } else {
-                    console.warn('Failed to fetch API key from backend, using fallback');
-                }
-            } catch (error) {
-                console.warn('Error fetching API key from backend:', error);
+        try {
+            const response = await fetch('/api/v1/config/frontend');
+            if (response.ok) {
+                const backendConfig = await response.json();
+                this.config.apiKey = backendConfig.apiKey;
+                console.log('🔑 API key fetched from backend config endpoint');
+            } else {
+                console.warn('Failed to fetch API key from backend config endpoint');
             }
-        } else {
-            // For non-production, immediately mark as ready
-            setTimeout(() => {
-                if (window.dispatchEvent) {
-                    window.dispatchEvent(new CustomEvent('configReady'));
-                }
-            }, 100);
+        } catch (error) {
+            console.warn('Error fetching API key from backend:', error);
+        } finally {
+            if (window.dispatchEvent) {
+                window.dispatchEvent(new CustomEvent('configReady'));
+            }
         }
     }
 
@@ -54,33 +43,32 @@ class Config {
 
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
             return 'local';
-        }
-        if (hostname.includes('staging') || hostname.includes('z9rms')) {
+        } else if (hostname.includes('staging') || hostname.includes('z9rms')) {
             return 'staging';
-        }
-        if (hostname === 'milmed.tech') {
+        } else if (hostname === 'milmed.tech' || hostname === 'patients.milmed.tech') {
             return 'production';
+        } else {
+            console.warn(`Unknown hostname: ${hostname}, defaulting to local config`);
+            return 'local';
         }
-        console.warn(`Unknown hostname: ${hostname}, defaulting to local config`);
-        return 'local';
     }
 
     getEnvironmentConfig() {
         const configs = {
             local: {
-                apiKey: 'bUXPV0bRJp1rU40EMaVDyUgFw1aafsn',
+                apiKey: null,
                 apiBaseUrl: '',
                 debug: true,
                 environment: 'local'
             },
             staging: {
-                apiKey: 'staging_key_placeholder', // Set via deployment
+                apiKey: null,
                 apiBaseUrl: '',
                 debug: false,
                 environment: 'staging'
             },
             production: {
-                apiKey: 'fetching_from_backend', // Will be replaced by _initializeApiKey
+                apiKey: null,
                 apiBaseUrl: '',
                 debug: false,
                 environment: 'production'

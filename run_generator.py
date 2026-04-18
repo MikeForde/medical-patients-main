@@ -6,6 +6,7 @@ Run this script directly to test the optimized generator.
 
 import argparse
 from collections import Counter
+import datetime
 import json
 import os
 import shutil
@@ -17,10 +18,123 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 try:
     from patient_generator.app import PatientGeneratorApp
+    from patient_generator.schemas_config import ConfigurationTemplateDB
 except ImportError:
     print("Error importing patient_generator package. Please make sure it's installed or in your Python path.")
     print("Try running: pip install -e .")
     sys.exit(1)
+
+
+DEFAULT_FRONT_NATIONALITIES = {
+    "Polish": "POL",
+    "Estonian": "EST",
+    "Finnish": "FIN",
+}
+
+
+class StaticConfigurationManager:
+    """Small adapter so the CLI can drive the newer configuration-manager based app."""
+
+    def __init__(self, config: ConfigurationTemplateDB):
+        self._config = config
+
+    def get_active_configuration(self):
+        return self._config
+
+    def get_front_configs(self):
+        return [front.model_dump() if hasattr(front, "model_dump") else front for front in self._config.front_configs]
+
+    def get_facility_configs(self):
+        return [
+            facility.model_dump() if hasattr(facility, "model_dump") else facility
+            for facility in self._config.facility_configs
+        ]
+
+    def get_injury_distribution(self):
+        return self._config.injury_distribution
+
+    def get_total_patients(self):
+        return self._config.total_patients
+
+    def get_config_value(self, key, default=None):
+        return getattr(self._config, key, default)
+
+    def get_static_front_definitions(self):
+        return None
+
+
+def _normalize_front_distribution(front_distribution):
+    """Convert legacy front distribution into the newer front_configs structure."""
+    total = sum(front_distribution.values())
+    if total <= 0:
+        total = 1.0
+
+    front_configs = []
+    for index, (front_name, raw_ratio) in enumerate(front_distribution.items(), start=1):
+        ratio = raw_ratio / total if raw_ratio > 1 else raw_ratio
+        nationality_code = DEFAULT_FRONT_NATIONALITIES.get(front_name, "USA")
+        front_configs.append(
+            {
+                "id": f"front_{index}",
+                "name": front_name,
+                "casualty_rate": ratio,
+                "nationality_distribution": [
+                    {
+                        "nationality_code": nationality_code,
+                        "percentage": 100.0,
+                    }
+                ],
+            }
+        )
+    return front_configs
+
+
+def _default_facility_configs(total_patients):
+    capacity = max(total_patients, 1)
+    return [
+        {"id": "Role1", "name": "Role 1", "capacity": capacity, "kia_rate": 0.08, "rtd_rate": 0.25},
+        {"id": "Role2", "name": "Role 2", "capacity": capacity, "kia_rate": 0.06, "rtd_rate": 0.35},
+        {"id": "Role3", "name": "Role 3", "capacity": capacity, "kia_rate": 0.04, "rtd_rate": 0.45},
+        {"id": "Role4", "name": "Role 4", "capacity": capacity, "kia_rate": 0.02, "rtd_rate": 0.70},
+    ]
+
+
+def build_configuration_manager(config):
+    """Translate legacy CLI config into the upstream configuration-manager contract."""
+    if all(key in config for key in ["front_configs", "facility_configs", "injury_distribution", "total_patients"]):
+        front_configs = config["front_configs"]
+        facility_configs = config["facility_configs"]
+        injury_distribution = config["injury_distribution"]
+        total_patients = config["total_patients"]
+    else:
+        front_distribution = config.get(
+            "front_distribution",
+            {
+                "Polish": 0.5,
+                "Estonian": 0.333,
+                "Finnish": 0.167,
+            },
+        )
+        front_configs = _normalize_front_distribution(front_distribution)
+        facility_configs = _default_facility_configs(config.get("total_patients", 10))
+        injury_distribution = config.get(
+            "injury_distribution",
+            {"Disease": 0.52, "Non-Battle Injury": 0.33, "Battle Injury": 0.15},
+        )
+        total_patients = config.get("total_patients", 10)
+
+    active_config = ConfigurationTemplateDB(
+        id="cli-config",
+        name=config.get("name", "CLI Configuration"),
+        description=config.get("description", "Generated from run_generator.py"),
+        total_patients=total_patients,
+        injury_distribution=injury_distribution,
+        front_configs=front_configs,
+        facility_configs=facility_configs,
+        created_at=datetime.datetime.utcnow(),
+        updated_at=datetime.datetime.utcnow(),
+    )
+    return StaticConfigurationManager(active_config)
 
 
 def parse_arguments():
@@ -154,13 +268,19 @@ def main():
     print(f"Encryption: {'Enabled' if config.get('use_encryption', True) else 'Disabled'}")
 
     # Initialize and run the generator
-    generator = PatientGeneratorApp(config)
+    config_manager = build_configuration_manager(config)
+    generator = PatientGeneratorApp(config_manager)
 
     print(f"Using {generator.num_workers} worker threads with batch size of {generator.batch_size}")
     print("\nStarting generation...")
 
     start_time = time.time()
-    patients, bundles = generator.run()
+    patients, bundles, output_files, summary = generator.run(
+        output_directory=config["output_directory"],
+        output_formats=config.get("output_formats", ["json", "xml"]),
+        use_compression=config.get("use_compression", True),
+        use_encryption=config.get("use_encryption", True),
+    )
     end_time = time.time()
 
     # Calculate performance metrics
@@ -190,6 +310,12 @@ def main():
     print(f"  - Batch size: {generator.batch_size}")
 
     print(f"\nOutput files saved to {config['output_directory']} directory.")
+    if summary:
+        print(f"Summary: {summary}")
+    if output_files:
+        print("Generated files:")
+        for output_file in output_files:
+            print(f"  - {output_file}")
 
     if args.benchmark:
         # Write benchmark results to file

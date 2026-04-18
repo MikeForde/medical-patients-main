@@ -56,10 +56,11 @@ function teardownMockFetch() {
 
 // API Client Tests
 testFramework.test('ApiClient should initialize with correct defaults', () => {
+    window.config = { apiKey: 'test-config-api-key' };
     const client = new ApiClient();
 
     assert(client.baseUrl === '', 'Base URL should default to empty string');
-    assert(client.apiKey === 'bUXPV0bRJp1rU40EMaVDyUgFw1aafsn', 'API key should have default value');
+    assert(client.apiKey === 'test-config-api-key', 'API key should come from frontend config');
     assert(client.defaultHeaders['Content-Type'] === 'application/json', 'Should have JSON content type');
     assert(client.defaultHeaders['X-API-Key'] === client.apiKey, 'Should include API key in headers');
 });

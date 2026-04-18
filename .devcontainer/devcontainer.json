@@ -9,8 +9,7 @@
       "version": "3.10.12"
     }
   },
-  "postCreateCommand":
-   "npm --version && node --version && python3 --version && pip install --upgrade pip && pip install -r requirements.txt && alembic upgrade head && ./scripts/install-task.sh",
+  "postCreateCommand": "npm --version && node --version && python3 --version && pip install --upgrade pip && pip install -r requirements.txt && alembic upgrade head && ./scripts/install-task.sh && npm install -g opencode-ai && opencode --help >/dev/null",
   "customizations": {
     "vscode": {
       "extensions": [

@@ -34,7 +34,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Configuration
-API_KEY="${API_KEY:-bUXPV0bRJp1rU40EMaVDyUgFw1aafsn}"
+API_KEY="${API_KEY:-CHANGE_ME_IN_PRODUCTION_DO_NOT_USE_DEFAULT}"
 MAX_HEALTH_RETRIES=30
 HEALTH_CHECK_INTERVAL=5
 TEST_TIMEOUT=60
@@ -84,7 +84,7 @@ validate_environment() {
     fi
 
     # Validate API key
-    if [[ "$API_KEY" == "bUXPV0bRJp1rU40EMaVDyUgFw1aafsn" ]]; then
+    if [[ "$API_KEY" == "CHANGE_ME_IN_PRODUCTION_DO_NOT_USE_DEFAULT" ]]; then
         log_warning "Using default API key - change API_KEY environment variable for production"
     fi
 
@@ -221,7 +221,7 @@ run_hardening_checks() {
     log_step "Running Hardening Checks"
 
     # Check for default credentials
-    if [[ "$API_KEY" == "bUXPV0bRJp1rU40EMaVDyUgFw1aafsn" ]]; then
+    if [[ "$API_KEY" == "CHANGE_ME_IN_PRODUCTION_DO_NOT_USE_DEFAULT" ]]; then
         log_warning "SECURITY: Default API key detected - change for production!"
     fi
 

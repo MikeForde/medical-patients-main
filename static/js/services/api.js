@@ -8,15 +8,14 @@
 class ApiClient {
     constructor(baseUrl = '', apiKey = null) {
         this.baseUrl = baseUrl;
-        // Use config API key if available, fallback to parameter or default
-        this.apiKey =
-            apiKey ||
-            (typeof window !== 'undefined' && window.config ? window.config.apiKey : 'bUXPV0bRJp1rU40EMaVDyUgFw1aafsn');
+        this.apiKey = apiKey || (typeof window !== 'undefined' && window.config ? window.config.apiKey : null);
         this.defaultHeaders = {
-            'Content-Type': 'application/json',
-            'X-API-Key': this.apiKey
+            'Content-Type': 'application/json'
         };
-        console.log('this.apiKey = ${this.apiKey}');
+
+        if (this.apiKey) {
+            this.defaultHeaders['X-API-Key'] = this.apiKey;
+        }
     }
 
     /**
@@ -24,10 +23,14 @@ class ApiClient {
      */
     async request(method, endpoint, data = null, options = {}) {
         const url = `${this.baseUrl}/api/v1${endpoint}`;
+        const currentApiKey =
+            options.apiKey || this.apiKey || (typeof window !== 'undefined' && window.config ? window.config.apiKey : null);
+        const authHeaders = currentApiKey ? { 'X-API-Key': currentApiKey } : {};
         const config = {
             method,
             headers: {
                 ...this.defaultHeaders,
+                ...authHeaders,
                 ...options.headers
             },
             ...options
@@ -35,6 +38,7 @@ class ApiClient {
 
         if (data && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
             config.body = JSON.stringify(data);
+            console.log(`API ${method} ${endpoint}:`, data);
         }
 
         try {
@@ -190,7 +194,7 @@ class ApiClient {
                     if (job.status === 'completed') {
                         resolve(job);
                     } else if (job.status === 'failed') {
-                        reject(new ApiError(500, 'Job Failed', job.error_message || 'Job processing failed'));
+                        reject(new ApiError(500, 'Job Failed', job.error || 'Job processing failed'));
                     } else {
                         // Job still running, continue polling
                         setTimeout(poll, pollInterval);
@@ -285,4 +289,4 @@ if (typeof window !== 'undefined') {
     window.apiClient = apiClient;
 }
 
-console.log('🔌 v1 API Client loaded and ready');
+// console.log('🔌 v1 API Client loaded and ready');

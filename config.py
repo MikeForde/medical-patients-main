@@ -7,12 +7,17 @@ from functools import lru_cache
 import os
 from typing import List, Optional
 
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
 
 class Settings:
     """Application settings loaded from environment variables."""
 
     # API Security
-    API_KEY: str = os.getenv("API_KEY", "bUXPV0bRJp1rU40EMaVDyUgFw1aafsn")
+    API_KEY: str = os.getenv("API_KEY", "CHANGE_ME_IN_PRODUCTION_DO_NOT_USE_DEFAULT")
 
     # Database
     DATABASE_URL: str = os.getenv(
