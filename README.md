@@ -256,24 +256,27 @@ The easiest way to get started:
 git clone https://github.com/MikeForde/medical-patients-main.git
 cd medical-patients-main
 
+# IMPORTANT!!!!!
 # 2. BEFORE opening it as devcontainer, start the database (PostgreSQL) and cache (Redis) containers in the background
 docker compose up -d  # starts only the db and redis services from the original docker-compose
 
-# 3. THEN, open the project in a VS Code Dev Container (requires Docker to be running) - there is already a devcontainer.json config
+# 3. Copy the .env.example file and rename .env - you will change this later but needed as part of devcontainer startup
+
+# 4. THEN, open the project in a VS Code Dev Container (requires Docker to be running) - there is already a devcontainer.json config
 # This will set up python, npm/node, install the pip requirements, database migrations and install Task
 
-#4 The original README claimed that running task init would create an .env file in root if it didn't exist but this is not the case (it creates it in scripts and is not useable without modification)
+# 5. The original README claimed that running task init would create an .env file in root if it didn't exist but this is not the case (it creates it in scripts and is not useable without modification)
 # Better option is to copy .env.example and rename it to .env.
 # Due to hard coding of the API_KEY in the frontend in several places, if you change the API_KEY in the .env file then you will need to do the same there as well.
 # I plan to fix this but don't forget you may need to clear your browser cache for it reload the frontend pages (and hence your new API_KEY)
 
-# 5. Run setup (runs initializations like database migrations) - some of this will already have been done by the devcontainer but does no harm and useful if any errors or you didn't get chance to make the db available above.
+# 6. Run setup (runs initializations like database migrations) - some of this will already have been done by the devcontainer but does no harm and useful if any errors or you didn't get chance to make the db available above.
 task init
 
-# 5. Start the development server 
+# 7. Start the development server 
 task dev
 
-# 6. Open the web interface in your browser
+# 8. Open the web interface in your browser
 # (For example, navigate to http://localhost:8000)
 
 ```
