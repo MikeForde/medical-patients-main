@@ -227,17 +227,18 @@ class PatientGeneratorApp {
     }
 
     getTimelineViewerBaseUrl() {
-        const { protocol, hostname, port } = window.location;
+        const { protocol, hostname, port, origin } = window.location;
+        const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
 
         if (port === '5174') {
             return `${protocol}//${hostname}:5174/`;
         }
 
-        if (port === '8000' || port === '') {
+        if (isLocalHost) {
             return `${protocol}//${hostname}:5174/`;
         }
 
-        return `${protocol}//${hostname}:5174/`;
+        return `${origin}/static/timeline/index.html`;
     }
 
     getTimelineViewerUrl(jobId = null) {
