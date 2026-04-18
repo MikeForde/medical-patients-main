@@ -151,11 +151,31 @@ This application generates simulated patient data for military medical exercises
 - **Database Schema Management**: Alembic migrations for robust schema versioning
 - **Background Job Processing**: Async patient generation with real-time progress tracking and job management
 
+- **Enhanced Medical Simulation** (v1.2.0): Realistic patient care modeling with:
+    - **Treatment Protocol System**: SNOMED CT coded procedures applied at each facility level
+    - **Body Part Tracking**: Injury localization (Head, Torso, Left/Right Arm, Left/Right Leg)
+    - **Health Score Engine**: Deterioration and improvement mechanics with Markov chain transitions
+    - **Facility-Specific Care**: Treatment capabilities scale from basic (POI) to advanced (Role 4)
+    - **Realistic Outcomes**: DOW (Died of Wounds), RTD (Returned to Duty), and continued care tracking
+    - **Treatment Effectiveness**: Health impact tracking (before/after) for each intervention
+
 ## Architecture
 
 The application features a clean, domain-driven architecture with clear separation of concerns. The codebase has been recently refactored (May 2024) to improve scalability, maintainability, and developer experience.
 
-### Recent Architecture Improvements (June 2025)
+### Recent Architecture Improvements
+
+#### November 2025 (v1.2.0)
+
+**✅ Enhanced Medical Simulation**: Comprehensive patient care modeling with treatment protocols, health tracking, and realistic outcomes.
+
+**✅ Treatment Protocol System**: SNOMED CT coded procedures with facility-specific capabilities and effectiveness modeling.
+
+**✅ Body Part Tracking**: Injury localization system supporting 6 anatomical regions for realistic trauma modeling.
+
+**✅ Health Score Engine**: Markov chain-based health transitions with deterioration, improvement, and treatment effects.
+
+#### June 2025 (v1.1.0)
 
 **✅ API Standardization**: Complete v1 API standardization with request/response models, validation, and error handling.
 
@@ -265,10 +285,9 @@ docker compose up -d  # starts only the db and redis services from the original 
 # 4. THEN, open the project in a VS Code Dev Container (requires Docker to be running) - there is already a devcontainer.json config
 # This will set up python, npm/node, install the pip requirements, database migrations and install Task
 
-# 5. The original README claimed that running task init would create an .env file in root if it didn't exist but this is not the case (it creates it in scripts and is not useable without modification)
-# Better option is to copy .env.example and rename it to .env.
-# Due to hard coding of the API_KEY in the frontend in several places, if you change the API_KEY in the .env file then you will need to do the same there as well.
-# I plan to fix this but don't forget you may need to clear your browser cache for it reload the frontend pages (and hence your new API_KEY)
+# 5. Copy .env.example and rename it to .env if needed.
+# The frontend now reads the API key from the backend config endpoint,
+# so changing API_KEY in .env is enough.
 
 # 6. Run setup (runs initializations like database migrations) - some of this will already have been done by the devcontainer but does no harm and useful if any errors or you didn't get chance to make the db available above.
 task init
@@ -291,15 +310,31 @@ task            # Show available commands
 task init       # First-time setup
 task dev        # Start development server
 task test       # Run tests
+task stop       # Stop all services
 
 # Additional Commands  
 task status     # Check service health
 task logs       # View application logs
 task timeline   # Open timeline viewer (optional)
+task clean      # Clean up Docker resources and caches
 
 ```
 
 💡 **Tip**: Most developers only need `task init` and `task dev`. Everything else is optional.
+
+### Alternative Setup Options
+
+If you prefer to avoid the recommended devcontainer-first flow:
+
+```bash
+task init:full  # Full setup with OS detection and Python environment
+task start      # Run everything in Docker
+task logs       # View logs
+```
+
+#### Ubuntu 24.04 LTS Note
+
+Ubuntu 24.04 enforces PEP 668, which usually means using a virtual environment for manual Python installs. The `task init:full` path is the safest option if you are not relying on the devcontainer.
 
 ### NEW Manual Setup - this section was part of the original README but due to the devcontainer there aren't many manual steps left!
 
@@ -329,13 +364,39 @@ uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
 The application is designed for deployment on traditional VPS infrastructure or containerized environments.
 
+### Docker Deployment
+
+```bash
+# Build production image
+docker build -t medical-patients:latest .
+
+# Run with external database
+docker run -d \
+  -p 8000:8000 \
+  -e DATABASE_URL="postgresql://user:pass@db-host:5432/medgen_db" \
+  -e API_KEY="your-secure-api-key" \
+  -e SECRET_KEY="your-secret-key" \
+  medical-patients:latest
+```
+
 ### Environment Variables
 
 - `DATABASE_URL`: PostgreSQL connection string
 - `API_KEY`: Primary API authentication key
 - `SECRET_KEY`: Application secret for session management
 - `REDIS_URL`: Redis connection (optional, for caching)
+  - Development: `redis://localhost:6379/0`
+  - Production (managed): `rediss://default:password@host:port/0`
 - `ENVIRONMENT`: Set to "production" for production deployments
+
+### Redis Configuration
+
+The application supports both self-hosted and managed Redis services:
+
+- **Development**: Local Redis via `docker compose`
+- **Production**: Managed Redis using `rediss://` with TLS
+
+See `docs/redis-migration.md` for migration guidance.
 
 ### Testing
 
@@ -622,8 +683,7 @@ The React Timeline Viewer is a standalone visualization tool that provides inter
 1. **Start the timeline viewer**:
    ```bash
    task timeline       # Development mode
-   # or
-   task timeline-start # Background mode
+   # stop with: task timeline:stop
    ```
 
 2. **Generate patient data** from the main application and download the results
@@ -635,15 +695,14 @@ The React Timeline Viewer is a standalone visualization tool that provides inter
    - Speed selector (0.25x to 10x)
    - Progress bar showing current time
    - Reset button to restart visualization
-   - Play/Pause timeline progression
-   - Adjust speed (0.5x to 60x)
    - Seek to specific time points
    - Reset to beginning
 
 ### Timeline Viewer Commands
 
 ```bash
-task timeline-viewer    # Start development server (port 5174)
+task timeline          # Start development server (port 5174)
+task timeline:stop     # Stop the timeline viewer if running in background
 ```
 
 To build for production, run `npm run build` in the patient-timeline-viewer directory.
@@ -669,6 +728,11 @@ This generator creates data compliant with:
 - NDEF format specifications for NFC tag compatibility
 
 ## Project Status
+
+### ✅ Recently Completed (November 2025)
+- **Enhanced Medical Simulation**: Treatment protocols, body-part tracking, and health score based outcomes added to patient generation
+- **Treatment Utility and Routing Models**: Improved facility-specific care and patient routing behavior
+- **Advanced Medical State Tracking**: Support for deterioration, improvement, and richer outcome modeling across the evacuation chain
 
 ### ✅ Recently Completed (June 2025)
 - **Temporal Patient Generation System**: Complete implementation of advanced warfare scenario modeling with 8 warfare types, environmental conditions, and realistic timing patterns
