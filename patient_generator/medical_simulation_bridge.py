@@ -31,7 +31,7 @@ class MedicalSimulationBridge:
         """
         self.orchestrator = PatientFlowOrchestrator()
         self.config = config or {}
-        self.enabled = os.environ.get("ENABLE_MEDICAL_SIMULATION", "true").lower() == "true"
+        self.enabled = os.environ.get("ENABLE_MEDICAL_SIMULATION", "false").lower() == "true"
 
         # Load realistic evacuation and transit times
         evac_times_path = os.path.join(os.path.dirname(__file__), "evacuation_transit_times.json")

@@ -260,16 +260,8 @@ class AsyncPatientGenerationService:
         self.config_manager = ConfigurationManager(database_instance=self.db)
         self.config_manager.load_configuration(config_id)
 
-        # Initialize components with config manager
-        # Enable medical simulation for enhanced realistic patient data
-        import os
-
-        os.environ["ENABLE_MEDICAL_SIMULATION"] = "true"
-        os.environ["ENABLE_TREATMENT_UTILITY_MODEL"] = "true"
-        os.environ["ENABLE_MARKOV_CHAIN"] = "true"
-        os.environ["ENABLE_WARFARE_MODIFIERS"] = "true"
-
-        # Use cached services' generators
+        # Initialize components with config manager. Runtime feature flags are
+        # controlled by the process environment rather than being forced here.
         self.pipeline = PatientGenerationPipeline(
             flow_simulator=PatientFlowSimulator(self.config_manager),
             demographics_generator=self.cached_demographics.get_demographics_generator(),
