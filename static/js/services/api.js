@@ -110,6 +110,10 @@ class ApiClient {
         return this.get(`/downloads/${jobId}`, { responseType: 'blob' });
     }
 
+    async getJobJson(jobId) {
+        return this.get(`/downloads/${jobId}?format=json`);
+    }
+
     // Configuration endpoints
     async listConfigurations() {
         return this.get('/configurations/');

@@ -232,6 +232,80 @@ body {
     box-shadow: 0 4px 12px rgba(8, 145, 178, 0.35);
 }
 
+.download-link--json {
+    background: linear-gradient(135deg, #475569 0%, #1e293b 100%);
+    box-shadow: 0 2px 8px rgba(51, 65, 85, 0.25);
+}
+
+.download-link--json:hover {
+    box-shadow: 0 4px 12px rgba(51, 65, 85, 0.35);
+}
+
+.json-viewer {
+    margin: 1rem -0.75rem 0;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+}
+
+.json-viewer__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.json-viewer__meta {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.json-viewer__copy {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-primary);
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.json-viewer__copy:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.json-viewer__textarea {
+    width: 100%;
+    min-height: 28rem;
+    resize: vertical;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.875rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+@media (min-width: 1024px) {
+    .json-viewer {
+        margin-left: -1.5rem;
+        margin-right: -1.5rem;
+        padding: 1.5rem;
+    }
+}
+
+.json-viewer__textarea::placeholder {
+    color: #94a3b8;
+}
+
 .download-info {
     margin-top: 1rem;
     font-size: 0.875rem;
@@ -535,6 +609,15 @@ a:focus-visible {
     .generate-button {
         padding: 0.875rem 1.5rem;
         font-size: 0.9rem;
+    }
+
+    .json-viewer__header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .json-viewer__copy {
+        width: 100%;
     }
 
     /* API banner responsive handled in banner.css */

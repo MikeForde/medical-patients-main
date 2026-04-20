@@ -20,6 +20,12 @@ class PatientGeneratorApp {
             fileSize: null
         };
 
+        this.jsonPreview = {
+            jobId: null,
+            text: '',
+            visible: false
+        };
+
         // Configuration history tracking
         this.configHistory = this.loadConfigHistory();
 
@@ -849,6 +855,12 @@ class PatientGeneratorApp {
     showDownloadOptions(job) {
         if (!this.downloadContainer) return;
 
+        this.jsonPreview = {
+            jobId: this.currentJobId,
+            text: '',
+            visible: false
+        };
+
         // Try to get file size from multiple sources
         let fileSize = job.result?.file_size || job.result?.size || this.generationData.fileSize;
         const fileSizeDisplay = fileSize ? this.formatFileSize(fileSize) : 'File ready for download';
@@ -869,6 +881,23 @@ class PatientGeneratorApp {
                         <i class="fas fa-project-diagram mr-2"></i>
                         Open in Timeline Viewer
                     </button>
+                    <button id="jsonViewerToggle" onclick="app.toggleJsonViewer('${this.currentJobId}')" class="download-link download-link--json">
+                        <i class="fas fa-code mr-2"></i>
+                        View JSON
+                    </button>
+                </div>
+                <div id="jsonViewerPanel" class="json-viewer" hidden>
+                    <div class="json-viewer__header">
+                        <div>
+                            <strong>Generated JSON</strong>
+                            <div id="jsonViewerMeta" class="json-viewer__meta">Loads raw <code>patients.json</code> for quick inspection and copy/paste.</div>
+                        </div>
+                        <button id="jsonViewerCopy" onclick="app.copyJsonPreview()" class="json-viewer__copy" disabled>
+                            <i class="fas fa-copy mr-2"></i>
+                            Copy JSON
+                        </button>
+                    </div>
+                    <textarea id="jsonViewerTextarea" class="json-viewer__textarea" readonly spellcheck="false" placeholder="Click View JSON to load the generated patient JSON."></textarea>
                 </div>
                 <div class="download-info">
                     <div class="info-item">
@@ -886,6 +915,125 @@ class PatientGeneratorApp {
                 </div>
             </div>
         `;
+    }
+
+    async toggleJsonViewer(jobId) {
+        const panel = document.getElementById('jsonViewerPanel');
+        const toggleButton = document.getElementById('jsonViewerToggle');
+        const textarea = document.getElementById('jsonViewerTextarea');
+        const meta = document.getElementById('jsonViewerMeta');
+        const copyButton = document.getElementById('jsonViewerCopy');
+
+        if (!panel || !toggleButton || !textarea || !meta || !copyButton) {
+            return;
+        }
+
+        if (this.jsonPreview.visible) {
+            panel.hidden = true;
+            this.jsonPreview.visible = false;
+            toggleButton.innerHTML = '<i class="fas fa-code mr-2"></i>View JSON';
+            return;
+        }
+
+        if (!this.jsonPreview.text || this.jsonPreview.jobId !== jobId) {
+            toggleButton.disabled = true;
+            toggleButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading JSON';
+            textarea.value = '';
+            meta.textContent = 'Fetching raw patients.json from the completed job...';
+            panel.hidden = false;
+
+            try {
+                const jsonData = await this.fetchJobJson(jobId);
+                const jsonText = JSON.stringify(jsonData, null, 2);
+                this.jsonPreview = {
+                    jobId,
+                    text: jsonText,
+                    visible: true
+                };
+
+                textarea.value = jsonText;
+                meta.textContent = `${jsonText.length.toLocaleString()} characters ready to inspect or copy.`;
+                copyButton.disabled = false;
+            } catch (error) {
+                panel.hidden = false;
+                this.jsonPreview = {
+                    jobId,
+                    text: '',
+                    visible: true
+                };
+                textarea.value = '';
+                meta.textContent = `Could not load JSON: ${error.message}`;
+                copyButton.disabled = true;
+            } finally {
+                toggleButton.disabled = false;
+            }
+        } else {
+            panel.hidden = false;
+            this.jsonPreview.visible = true;
+        }
+
+        toggleButton.innerHTML = '<i class="fas fa-eye-slash mr-2"></i>Hide JSON';
+    }
+
+    async copyJsonPreview() {
+        if (!this.jsonPreview.text) {
+            return;
+        }
+
+        const copyButton = document.getElementById('jsonViewerCopy');
+        const textarea = document.getElementById('jsonViewerTextarea');
+        if (!copyButton || !textarea) {
+            return;
+        }
+
+        const originalHtml = copyButton.innerHTML;
+
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(this.jsonPreview.text);
+            } else {
+                textarea.focus();
+                textarea.select();
+                document.execCommand('copy');
+                textarea.setSelectionRange(0, 0);
+            }
+
+            copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>Copied';
+        } catch (error) {
+            copyButton.innerHTML = '<i class="fas fa-times mr-2"></i>Copy failed';
+        }
+
+        window.setTimeout(() => {
+            copyButton.innerHTML = originalHtml;
+        }, 1500);
+    }
+
+    async fetchJobJson(jobId) {
+        if (this.apiClient?.getJobJson) {
+            return this.apiClient.getJobJson(jobId);
+        }
+
+        if (this.apiClient?.get) {
+            return this.apiClient.get(`/downloads/${jobId}?format=json`);
+        }
+
+        const apiKey = window.config?.apiKey;
+        const response = await fetch(`/api/v1/downloads/${jobId}?format=json`, {
+            headers: apiKey ? { 'X-API-Key': apiKey } : {}
+        });
+
+        if (!response.ok) {
+            let detail = 'Failed to load JSON';
+            try {
+                const errorData = await response.json();
+                detail = errorData.detail || errorData.message || detail;
+            } catch {
+                // Ignore JSON parsing errors for non-JSON error responses.
+            }
+            throw new Error(detail);
+        }
+
+        return response.json();
     }
 
     async downloadResults(jobId) {
