@@ -36,6 +36,7 @@ async def generate_patients_stream(
     config_id: str,
     patient_count: int,
     batch_size: int = 100,
+    medical_simulation: Optional[dict] = None,
     generation_service: AsyncPatientGenerationService = None,
 ) -> AsyncIterator[bytes]:
     """
@@ -81,11 +82,12 @@ async def generate_patients_stream(
         output_directory=str(output_dir),
         output_formats=["json"],  # Only JSON for streaming
         use_compression=False,  # No compression for streaming
+        medical_simulation=medical_simulation or {},
     )
 
     # Initialize the generation pipeline
     assert generation_service is not None, "Generation service is required"
-    generation_service._initialize_pipeline(config_id)
+    generation_service._initialize_pipeline(config_id, medical_simulation or {})
 
     # Track progress
     first_patient = True
@@ -206,12 +208,13 @@ async def stream_patients(
 
         # Create streaming response
         return StreamingResponse(
-            generate_patients_stream(
-                config_id=configuration_id,
-                patient_count=patient_count,
-                batch_size=batch_size,
-                generation_service=generation_service,
-            ),
+                generate_patients_stream(
+                    config_id=configuration_id,
+                    patient_count=patient_count,
+                    batch_size=batch_size,
+                    medical_simulation={},
+                    generation_service=generation_service,
+                ),
             media_type="application/json",
             headers={
                 "Cache-Control": "no-cache",
@@ -305,6 +308,7 @@ async def stream_patients_with_config(
                     config_id=config_template.id,
                     patient_count=config_template.total_patients,
                     batch_size=batch_size,
+                    medical_simulation=inner_config.get("medical_simulation", {}),
                     generation_service=generation_service,
                 ),
                 media_type="application/json",

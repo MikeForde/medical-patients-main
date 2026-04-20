@@ -131,6 +131,7 @@ class PatientGeneratorApp {
 
         // Medical simulation checkbox events
         const medicalCheckboxes = [
+            'enable-medical-simulation',
             'enable-treatment-utility',
             'enable-diagnostic-uncertainty',
             'enable-markov-chain',
@@ -415,6 +416,12 @@ class PatientGeneratorApp {
 
         const features = [
             {
+                id: 'enable-medical-simulation',
+                label: 'MSB',
+                title: 'Medical Simulation Bridge',
+                colorClass: 'bg-rose-100 text-rose-700'
+            },
+            {
                 id: 'enable-treatment-utility',
                 label: 'TUM',
                 title: 'Treatment Utility Model',
@@ -609,6 +616,7 @@ class PatientGeneratorApp {
 
         // Get medical simulation settings from toggle switches
         const medicalSimulationSettings = {
+            enable_medical_simulation: document.getElementById('enable-medical-simulation')?.checked ?? false,
             enable_treatment_utility: document.getElementById('enable-treatment-utility')?.checked ?? true,
             enable_diagnostic_uncertainty: document.getElementById('enable-diagnostic-uncertainty')?.checked ?? true,
             enable_markov_chain: document.getElementById('enable-markov-chain')?.checked ?? true,

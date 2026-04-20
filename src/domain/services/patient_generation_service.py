@@ -47,10 +47,13 @@ class GenerationContext:
     encryption_password: Optional[str] = None
     output_formats: Optional[List[str]] = None
     use_compression: bool = False
+    medical_simulation: Optional[Dict[str, bool]] = None
 
     def __post_init__(self):
         if self.output_formats is None:
             self.output_formats = ["json"]
+        if self.medical_simulation is None:
+            self.medical_simulation = {}
 
 
 class PatientGenerationPipeline:
@@ -254,7 +257,7 @@ class AsyncPatientGenerationService:
         self.cached_demographics = CachedDemographicsService()
         self.cached_medical = CachedMedicalService()
 
-    def _initialize_pipeline(self, config_id: str):
+    def _initialize_pipeline(self, config_id: str, medical_simulation: Optional[Dict[str, bool]] = None):
         """Initialize the generation pipeline with required components."""
         # Initialize configuration manager
         self.config_manager = ConfigurationManager(database_instance=self.db)
@@ -263,7 +266,7 @@ class AsyncPatientGenerationService:
         # Initialize components with config manager. Runtime feature flags are
         # controlled by the process environment rather than being forced here.
         self.pipeline = PatientGenerationPipeline(
-            flow_simulator=PatientFlowSimulator(self.config_manager),
+            flow_simulator=PatientFlowSimulator(self.config_manager, medical_simulation=medical_simulation),
             demographics_generator=self.cached_demographics.get_demographics_generator(),
             medical_generator=self.cached_medical._get_condition_generator(),
             output_formatter=OutputFormatter(),
@@ -283,7 +286,7 @@ class AsyncPatientGenerationService:
             await self.cached_medical.warm_cache()
 
             # Initialize pipeline with configuration
-            self._initialize_pipeline(context.config.id)
+            self._initialize_pipeline(context.config.id, context.medical_simulation)
 
         # Ensure output directory exists
         os.makedirs(context.output_directory, exist_ok=True)

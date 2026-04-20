@@ -305,6 +305,7 @@ async def _run_generation_task(
             encryption_password=config.get("encryption_password"),
             output_formats=config.get("output_formats", ["json"]),
             use_compression=config.get("use_compression", False),
+            medical_simulation=inner_config.get("medical_simulation", {}),
         )
 
         # Progress callback

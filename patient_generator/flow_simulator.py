@@ -49,9 +49,10 @@ except ImportError:
 class PatientFlowSimulator:
     """Optimized simulator for patient flow through medical treatment facilities, using dynamic configurations."""
 
-    def __init__(self, config_manager: ConfigurationManager):
+    def __init__(self, config_manager: ConfigurationManager, medical_simulation: Optional[Dict[str, bool]] = None):
         self.config_manager = config_manager
         self.patients: List[Patient] = []
+        self.medical_simulation_config = medical_simulation or {}
         active_config = self.config_manager.get_active_configuration()
 
         if not active_config:
@@ -62,7 +63,9 @@ class PatientFlowSimulator:
         self.evacuation_manager = EvacuationTimeManager()
 
         # Optional medical simulation enhancement
-        self.use_medical_simulation = os.environ.get("ENABLE_MEDICAL_SIMULATION", "false").lower() == "true"
+        self.use_medical_simulation = self._resolve_feature_flag(
+            "enable_medical_simulation", "ENABLE_MEDICAL_SIMULATION", False
+        )
         # We will instantiate MedicalSimulationBridge per patient to avoid shared state issues
         # self.medical_bridge = None
         if self.use_medical_simulation:
@@ -77,7 +80,9 @@ class PatientFlowSimulator:
                 self.use_medical_simulation = False
 
         # Treatment utility model (works independently of medical simulation)
-        self.use_treatment_utility = os.environ.get("ENABLE_TREATMENT_UTILITY_MODEL", "true").lower() == "true"
+        self.use_treatment_utility = self._resolve_feature_flag(
+            "enable_treatment_utility", "ENABLE_TREATMENT_UTILITY_MODEL", True
+        )
         self.treatment_model = None
         if self.use_treatment_utility:
             try:
@@ -90,7 +95,7 @@ class PatientFlowSimulator:
                 self.use_treatment_utility = False
 
         # Facility Markov Chain for probabilistic routing (MILESTONE 3)
-        self.use_markov_chain = os.environ.get("ENABLE_MARKOV_CHAIN", "true").lower() == "true"
+        self.use_markov_chain = self._resolve_feature_flag("enable_markov_chain", "ENABLE_MARKOV_CHAIN", True)
         self.markov_chain = None
         if self.use_markov_chain and MARKOV_CHAIN_AVAILABLE:
             try:
@@ -101,7 +106,9 @@ class PatientFlowSimulator:
                 self.use_markov_chain = False
 
         # Warfare modifiers for injury patterns (MILESTONE 4)
-        self.use_warfare_modifiers = os.environ.get("ENABLE_WARFARE_MODIFIERS", "true").lower() == "true"
+        self.use_warfare_modifiers = self._resolve_feature_flag(
+            "enable_warfare_modifiers", "ENABLE_WARFARE_MODIFIERS", True
+        )
         self.warfare_modifiers = None
         if self.use_warfare_modifiers and WARFARE_MODIFIERS_AVAILABLE:
             try:
@@ -177,6 +184,12 @@ class PatientFlowSimulator:
             self._base_date_str = injuries_config.get("base_date", active_config.created_at.strftime("%Y-%m-%d"))
         except Exception:
             self._base_date_str = active_config.created_at.strftime("%Y-%m-%d")
+
+    def _resolve_feature_flag(self, config_key: str, env_key: str, default: bool) -> bool:
+        """Resolve a runtime feature flag from request config first, then environment."""
+        if config_key in self.medical_simulation_config:
+            return bool(self.medical_simulation_config[config_key])
+        return os.environ.get(env_key, str(default).lower()).lower() == "true"
 
         # Parallelization settings from simulation_parameters.json
         parallel_config = self._sim_params.get("parallelization", {})
@@ -498,7 +511,7 @@ class PatientFlowSimulator:
                 from .medical_simulation_bridge import MedicalSimulationBridge
 
                 # Create a fresh bridge for this patient to ensure isolation
-                medical_bridge = MedicalSimulationBridge()
+                medical_bridge = MedicalSimulationBridge(config=self.medical_simulation_config)
 
                 # Enhance patient with medical simulation
                 patient = medical_bridge.enhance_patient(patient)

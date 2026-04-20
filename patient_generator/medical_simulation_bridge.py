@@ -29,9 +29,14 @@ class MedicalSimulationBridge:
         Args:
             config: Optional configuration for medical simulation
         """
-        self.orchestrator = PatientFlowOrchestrator()
         self.config = config or {}
-        self.enabled = os.environ.get("ENABLE_MEDICAL_SIMULATION", "false").lower() == "true"
+        self.enabled = self._resolve_feature_flag("enable_medical_simulation", "ENABLE_MEDICAL_SIMULATION", False)
+        enable_diagnostic_uncertainty = self._resolve_feature_flag(
+            "enable_diagnostic_uncertainty", "ENABLE_DIAGNOSTIC_UNCERTAINTY", True
+        )
+        self.orchestrator = PatientFlowOrchestrator(
+            enable_diagnostic_uncertainty=enable_diagnostic_uncertainty
+        )
 
         # Load realistic evacuation and transit times
         evac_times_path = os.path.join(os.path.dirname(__file__), "evacuation_transit_times.json")
@@ -39,7 +44,9 @@ class MedicalSimulationBridge:
             self.timing_config = json.load(f)
 
         # Initialize treatment utility model independently (works with or without medical simulation)
-        self.utility_model_enabled = os.environ.get("ENABLE_TREATMENT_UTILITY_MODEL", "true").lower() == "true"
+        self.utility_model_enabled = self._resolve_feature_flag(
+            "enable_treatment_utility", "ENABLE_TREATMENT_UTILITY_MODEL", True
+        )
         self.treatment_model = TreatmentUtilityModel() if self.utility_model_enabled else None
 
         # Initialize treatment protocol manager
@@ -57,6 +64,12 @@ class MedicalSimulationBridge:
             "utility_model_used": 0,
             "fallback_used": 0,
         }
+
+    def _resolve_feature_flag(self, config_key: str, env_key: str, default: bool) -> bool:
+        """Resolve a feature flag from request config first, then environment."""
+        if config_key in self.config:
+            return bool(self.config[config_key])
+        return os.environ.get(env_key, str(default).lower()).lower() == "true"
 
     def enhance_patient(self, patient: Patient) -> Patient:
         """
