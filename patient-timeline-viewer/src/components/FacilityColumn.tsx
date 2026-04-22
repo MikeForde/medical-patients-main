@@ -115,7 +115,7 @@ export const FacilityColumn: React.FC<FacilityColumnProps> = ({
   }, [patientsWithLocation.length]);
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex min-h-0 flex-col h-full ${className}`}>
       {/* Header - Fixed Height */}
       <div className={`
         ${facilityInfo.color}
@@ -188,10 +188,10 @@ export const FacilityColumn: React.FC<FacilityColumnProps> = ({
       </div>
 
       {/* Patient list */}
-      <div className="flex-1 border-l-2 border-r-2 border-gray-300 bg-white overflow-hidden relative">
+      <div className="flex-1 min-h-0 border-l-2 border-r-2 border-gray-300 bg-white overflow-hidden relative">
         <div 
           ref={scrollContainerRef}
-          className="h-full overflow-y-auto scrollbar-hide"
+          className="h-full min-h-0 overflow-y-auto scrollbar-hide"
         >
           <div className="p-1">
             <AnimatePresence mode="popLayout">

@@ -428,7 +428,7 @@ function App() {
             />
 
             {/* Facility columns */}
-            <div className="flex-1 grid grid-cols-5 gap-2 p-2 overflow-hidden">
+            <div className="flex-1 min-h-0 grid grid-cols-5 gap-2 p-2 overflow-hidden">
               <AnimatePresence>
                 {FACILITIES.map((facility) => (
                   <FacilityColumn
@@ -437,7 +437,7 @@ function App() {
                     patients={filteredPatients}
                     currentTime={playbackState.currentTime}
                     cumulativeCounts={(cumulativeCounts as any)[facility] || { kia: 0, rtd: 0 }}
-                    className="h-full"
+                      className="h-full min-h-0"
                   />
                 ))}
               </AnimatePresence>
