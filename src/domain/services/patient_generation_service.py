@@ -222,13 +222,14 @@ class PatientGenerationPipeline:
         patient.injury_type = condition_type
 
         # Generate triage category based on simple logic
-        triage_rand = patient.id % 10
-        if triage_rand < 2:
-            patient.triage_category = "T1"
-        elif triage_rand < 5:
-            patient.triage_category = "T2"
-        else:
-            patient.triage_category = "T3"
+        if not patient.triage_category:
+            triage_rand = patient.id % 10
+            if triage_rand < 2:
+                patient.triage_category = "T1"
+            elif triage_rand < 5:
+                patient.triage_category = "T2"
+            else:
+                patient.triage_category = "T3"
 
         # Generate condition using the medical generator
         condition = await to_thread(

@@ -1106,13 +1106,13 @@ class PatientFlowSimulator:
             )
 
         # Simulate flow for each patient
-        if len(patients) >= 500 and self.num_workers > 1:
-            self._simulate_flow_parallel(patients)
-        else:
-            for patient in patients:
-                self._simulate_patient_flow_single(patient)
+        # if len(patients) >= 500 and self.num_workers > 1:
+        #     self._simulate_flow_parallel(patients)
+        # else:
+        #     for patient in patients:
+        #         self._simulate_patient_flow_single(patient)
 
-        return patients
+        # return patients
 
     def _load_injuries_config(self) -> Dict[str, Any]:
         """Load injuries.json configuration"""
