@@ -185,13 +185,7 @@ class PatientFlowSimulator:
         except Exception:
             self._base_date_str = active_config.created_at.strftime("%Y-%m-%d")
 
-    def _resolve_feature_flag(self, config_key: str, env_key: str, default: bool) -> bool:
-        """Resolve a runtime feature flag from request config first, then environment."""
-        if config_key in self.medical_simulation_config:
-            return bool(self.medical_simulation_config[config_key])
-        return os.environ.get(env_key, str(default).lower()).lower() == "true"
-
-        # Parallelization settings from simulation_parameters.json
+         # Parallelization settings from simulation_parameters.json
         parallel_config = self._sim_params.get("parallelization", {})
         self.batch_size = parallel_config.get("batch_size_default", 100)
         try:
@@ -203,6 +197,13 @@ class PatientFlowSimulator:
                 self.batch_size = parallel_config.get("batch_size_large", 250)
         except Exception:
             self.num_workers = 4
+
+    def _resolve_feature_flag(self, config_key: str, env_key: str, default: bool) -> bool:
+        """Resolve a runtime feature flag from request config first, then environment."""
+        if config_key in self.medical_simulation_config:
+            return bool(self.medical_simulation_config[config_key])
+        return os.environ.get(env_key, str(default).lower()).lower() == "true"
+
 
     def _build_transition_matrix(self) -> Dict[str, Dict[str, float]]:
         """Dynamically build the transition matrix based on configured facilities."""
