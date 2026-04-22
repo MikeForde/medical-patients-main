@@ -10,6 +10,9 @@ interface FacilityColumnProps {
   currentTime: Date;
   cumulativeCounts: { kia: number; rtd: number };
   className?: string;
+  isInteractionEnabled?: boolean;
+  onPatientInspect?: (patient: Patient) => void;
+  onPatientInspectJson?: (patient: Patient) => void;
 }
 
 export const FacilityColumn: React.FC<FacilityColumnProps> = ({ 
@@ -17,7 +20,10 @@ export const FacilityColumn: React.FC<FacilityColumnProps> = ({
   patients, 
   currentTime,
   cumulativeCounts,
-  className = '' 
+  className = '',
+  isInteractionEnabled = false,
+  onPatientInspect,
+  onPatientInspectJson
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollInfo, setScrollInfo] = useState({ atBottom: true, hiddenCount: 0 });
@@ -212,6 +218,9 @@ export const FacilityColumn: React.FC<FacilityColumnProps> = ({
                     patient={patient}
                     location={location}
                     layoutId={`patient-${patient.id.toString()}-${name}`}
+                    isInteractive={isInteractionEnabled}
+                    onInspect={onPatientInspect}
+                    onInspectJson={onPatientInspectJson}
                   />
                 ))
               )}

@@ -6,12 +6,18 @@ interface PatientCardProps {
   patient: Patient;
   location: PatientLocation;
   layoutId?: string;
+  isInteractive?: boolean;
+  onInspect?: (patient: Patient) => void;
+  onInspectJson?: (patient: Patient) => void;
 }
 
 export const PatientCard: React.FC<PatientCardProps> = ({ 
   patient, 
   location,
-  layoutId 
+  layoutId,
+  isInteractive = false,
+  onInspect,
+  onInspectJson
 }) => {
   // Determine card styling based on status
   const getCardStyles = () => {
@@ -89,11 +95,27 @@ export const PatientCard: React.FC<PatientCardProps> = ({
       className={`
         ${styles.bg} ${styles.text}
         border rounded p-1.5 mb-1 shadow-sm hover:shadow-md
-        transition-shadow duration-200 cursor-pointer
+        transition-shadow duration-200 ${isInteractive ? 'cursor-pointer' : 'cursor-default'}
         min-w-0 relative
       `}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={isInteractive ? { scale: 1.02 } : undefined}
+      whileTap={isInteractive ? { scale: 0.98 } : undefined}
+      onClick={() => {
+        if (!isInteractive) {
+          return;
+        }
+
+        onInspect?.(patient);
+      }}
+      onContextMenu={(event) => {
+        if (!isInteractive) {
+          return;
+        }
+
+        event.preventDefault();
+        onInspectJson?.(patient);
+      }}
+      title={isInteractive ? 'Click for details, right-click for JSON' : 'Pause playback to inspect this patient'}
     >
       {/* Header row with status and triage */}
       <div className="flex items-center justify-between mb-0.5">
