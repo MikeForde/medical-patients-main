@@ -105,6 +105,12 @@ class TemporalPatternGenerator:
             if all_events and difference != 0:
                 all_events[-1].patient_count += difference
 
+        # Console log detailed report about all_events
+        # print(f"Generated {len(all_events)} events with a total of {sum(e.patient_count for e in all_events)} patients:")
+        # for event in all_events:
+        #     print(f"  - Event ID: {event.event_id}, Timestamp: {event.timestamp}, Patients: {event.patient_count}, Warfare Type: {event.warfare_type}, Mass Casualty: {event.is_mass_casualty}, Environmental Factors: {event.environmental_factors}, Special Event Type: {event.special_event_type}")     
+            
+
         return all_events
 
     def _calculate_warfare_weights(self, active_types: List[str]) -> Dict[str, float]:
