@@ -7,7 +7,7 @@ COPY patient-timeline-viewer/ ./
 RUN npm run build
 
 # 2) Final stage: Python + static
-FROM image-registry.openshift-image-registry.svc:5000/openshift/python@sha256:6f6592717b9d88dc1ace1c4c144cfcbf59afa288edeb3cdd7a79d6d2f7467a11
+FROM image-registry.openshift-image-registry.svc:5000/openshift/python@sha256:d8e414ee7b4e31300f1870d16019f2f840a9d372e42ed776cdaa9e39879351a5
 
 WORKDIR /app
 

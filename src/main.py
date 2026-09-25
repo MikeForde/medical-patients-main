@@ -68,7 +68,16 @@ async def lifespan(app: FastAPI):
     # Ensure demo API key exists
     try:
         # We need to create a sync context for the database operation
-        engine = create_engine(settings.DATABASE_URL.replace("+asyncpg", ""))
+        sync_database_url = settings.DATABASE_URL.replace("+asyncpg", "")
+
+        if sync_database_url.startswith("postgresql://"):
+            sync_database_url = sync_database_url.replace(
+                "postgresql://",
+                "postgresql+psycopg2://",
+                1,
+            )
+
+        engine = create_engine(sync_database_url)
         session_local = sessionmaker(bind=engine)
 
         with session_local() as db:

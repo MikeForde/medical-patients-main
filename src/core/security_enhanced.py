@@ -34,7 +34,17 @@ DEMO_API_KEY: str = str(DEMO_API_KEY_CONFIG["key"])
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL:
     try:
-        engine = create_engine(DATABASE_URL.replace("+asyncpg", ""))
+        sync_database_url = DATABASE_URL.replace("+asyncpg", "")
+
+        if sync_database_url.startswith("postgresql://"):
+            sync_database_url = sync_database_url.replace(
+                "postgresql://",
+                "postgresql+psycopg2://",
+                1,
+            )
+
+        engine = create_engine(sync_database_url)
+
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     except Exception:
         # Handle cases where database URL is invalid or engine creation fails

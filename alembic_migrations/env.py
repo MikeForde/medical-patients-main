@@ -80,8 +80,14 @@ def run_migrations_online() -> None:
         # If DATABASE_URL is set, create engine configuration directly
         # This assumes DATABASE_URL is a complete SQLAlchemy URL
         from sqlalchemy import create_engine
+        from sqlalchemy.engine import make_url
 
-        connectable = create_engine(db_url)
+        url = make_url(db_url)
+
+        if url.drivername == "postgresql":
+            url = url.set(drivername="postgresql+psycopg2")
+
+        connectable = create_engine(url)
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
