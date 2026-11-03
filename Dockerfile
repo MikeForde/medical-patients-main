@@ -9,6 +9,12 @@ RUN npm run build
 # 2) Final stage: Python + static
 FROM image-registry.openshift-image-registry.svc:5000/openshift/python@sha256:d8e414ee7b4e31300f1870d16019f2f840a9d372e42ed776cdaa9e39879351a5
 
+USER root
+RUN dnf -y update brotli libbrotli brotli-devel \
+    && dnf clean all \
+    && rpm -q brotli libbrotli brotli-devel \
+    && rpm -q --changelog libbrotli | grep 'CVE-2026-111497'
+
 WORKDIR /app
 
 # Create writable output & temp directories for any non-root UID
