@@ -6,14 +6,16 @@ RUN npm ci
 COPY patient-timeline-viewer/ ./
 RUN npm run build
 
-# 2) Final stage: Python + static
-FROM image-registry.openshift-image-registry.svc:5000/openshift/python@sha256:d8e414ee7b4e31300f1870d16019f2f840a9d372e42ed776cdaa9e39879351a5
+# 2) Final stage: Python 3.12 / RHEL 9.9
+FROM registry.redhat.io/ubi9/python-312@sha256:5b184c2acfe9e2eb9df1a243da8e4a82fedd96e5e7f6648ec5512656177fa326
 
+# Verify security fixes in the base image
 USER root
-RUN dnf -y update brotli libbrotli brotli-devel \
-    && dnf clean all \
-    && rpm -q brotli libbrotli brotli-devel \
-    && rpm -q --changelog libbrotli | grep 'CVE-2026-111497'
+
+RUN rpm -q openssl-libs mariadb-connector-c libbrotli \
+ && rpm -q --changelog openssl-libs | grep 'CVE-2026-45445' \
+ && rpm -q --changelog mariadb-connector-c | grep 'CVE-2026-44172' \
+ && rpm -q --changelog libbrotli | grep 'CVE-2026-111497'
 
 WORKDIR /app
 
